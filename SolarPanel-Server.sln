@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolarPanel.API", "src\SolarPanel.API\SolarPanel.API.csproj", "{0B3C9764-2B83-4280-8F57-46230CB461AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolarPanel.Core", "src\SolarPanel.Core\SolarPanel.Core.csproj", "{FCCAB0DA-E221-48CA-9728-8B1B85898999}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolarPanel.Application", "src\SolarPanel.Application\SolarPanel.Application.csproj", "{19A7CE5E-4945-4AB1-B0DA-5AA7AB60B482}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolarPanel.Infrastructure", "src\SolarPanel.Infrastructure\SolarPanel.Infrastructure.csproj", "{0C0A210C-3FA9-412B-B91A-20CB659F6427}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0B3C9764-2B83-4280-8F57-46230CB461AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B3C9764-2B83-4280-8F57-46230CB461AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B3C9764-2B83-4280-8F57-46230CB461AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B3C9764-2B83-4280-8F57-46230CB461AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCCAB0DA-E221-48CA-9728-8B1B85898999}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCCAB0DA-E221-48CA-9728-8B1B85898999}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCCAB0DA-E221-48CA-9728-8B1B85898999}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCCAB0DA-E221-48CA-9728-8B1B85898999}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19A7CE5E-4945-4AB1-B0DA-5AA7AB60B482}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19A7CE5E-4945-4AB1-B0DA-5AA7AB60B482}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19A7CE5E-4945-4AB1-B0DA-5AA7AB60B482}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19A7CE5E-4945-4AB1-B0DA-5AA7AB60B482}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C0A210C-3FA9-412B-B91A-20CB659F6427}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C0A210C-3FA9-412B-B91A-20CB659F6427}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C0A210C-3FA9-412B-B91A-20CB659F6427}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C0A210C-3FA9-412B-B91A-20CB659F6427}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
