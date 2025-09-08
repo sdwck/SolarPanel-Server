@@ -137,4 +137,61 @@ public class SolarDataService : ISolarDataService
                 : null
         };
     }
+    public async Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv")
+    {
+        if (from > to)
+            throw new ArgumentException("'from' cannot be greater than 'to'");
+
+        source = (source ?? "pv").Trim().ToLowerInvariant();
+        if (source != "pv" && source != "ac")
+            throw new ArgumentException("source must be 'pv' or 'ac'");
+
+        var data = await _repository.GetByDateRangeAsync(from, to);
+
+       
+        var ordered = data
+            .Where(d => d.PowerData != null)
+            .OrderBy(d => d.Timestamp)
+            .ToList();
+
+        double energyWh = 0.0;
+        int samplesUsed = 0;
+
+        for (int i = 1; i < ordered.Count; i++)
+        {
+            var prev = ordered[i - 1];
+            var curr = ordered[i];
+
+            if (prev.PowerData == null || curr.PowerData == null) continue;
+
+            double p1 = source == "pv"
+                ? prev.PowerData.PvInputPower
+                : prev.PowerData.AcOutputActivePower;
+
+            double p2 = source == "pv"
+                ? curr.PowerData.PvInputPower
+                : curr.PowerData.AcOutputActivePower;
+
+            
+            if (p1 < 0 || p2 < 0) continue;
+
+            var dtSeconds = (curr.Timestamp - prev.Timestamp).TotalSeconds;
+            if (dtSeconds <= 0) continue;
+
+            
+            var segmentWh = ((p1 + p2) / 2.0) * (dtSeconds / 3600.0);
+            energyWh += segmentWh;
+            samplesUsed++;
+        }
+
+        return new EnergyResponseDto
+        {
+            From = from,
+            To = to,
+            EnergyKWh = Math.Round(energyWh / 1000.0, 4),
+            SamplesUsed = samplesUsed + 1, 
+            Source = source
+        };
+    }
+
 }

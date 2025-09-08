@@ -81,7 +81,7 @@ public class SolarDataController : ControllerBase
     {
         try
         {
-            if (from > to)
+            if (from > to) 
                 return BadRequest("'From' date cannot be greater than 'To' date");
 
             var result = await _solarDataService.GetByDateRangeAsync(from, to);
@@ -112,4 +112,29 @@ public class SolarDataController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+    [HttpGet("energy")]
+    public async Task<ActionResult<EnergyResponseDto>> GetEnergy(
+        [FromQuery] DateTime from,
+        [FromQuery] DateTime to,
+        [FromQuery] string source = "pv")
+    {
+        try
+        {
+            if (from > to)
+                return BadRequest("'from' cannot be greater than 'to'");
+
+            var result = await _solarDataService.GetEnergyProducedAsync(from, to, source);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating energy for range {From} - {To}", from, to);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
 }

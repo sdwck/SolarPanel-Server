@@ -12,7 +12,7 @@ public class BatteryData
     public decimal BatteryVoltageFromScc { get; set; }
     [Column(TypeName = "decimal(5,1)")]
     public decimal BatteryChargingCurrent { get; set; }
-    public int BatteryCapacity { get; set; }
+    public int BatteryCapacity { get; set; }    
     [Column(TypeName = "decimal(5,1)")]
     public decimal BatteryDischargeCurrent { get; set; }
     

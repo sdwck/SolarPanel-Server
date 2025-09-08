@@ -26,7 +26,7 @@ public class MqttBackgroundService : BackgroundService
             _logger = logger;
             _settings = settings.Value;
             _mqttService = mqttService;
-        }
+        }   
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
