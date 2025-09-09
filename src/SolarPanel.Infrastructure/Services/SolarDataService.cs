@@ -175,12 +175,13 @@ public class SolarDataService : ISolarDataService
             
             if (p1 < 0 || p2 < 0) continue;
 
-            var dtSeconds = (curr.Timestamp - prev.Timestamp).TotalSeconds;
-            if (dtSeconds <= 0) continue;
+            
+            
 
             
-            var segmentWh = ((p1 + p2) / 2.0) * (dtSeconds / 3600.0);
-            energyWh += segmentWh;
+            
+            var segmentKWh = ((p1 + p2) / 2.0)  * (1 / 60.0);
+            energyWh += segmentKWh;
             samplesUsed++;
         }
 
