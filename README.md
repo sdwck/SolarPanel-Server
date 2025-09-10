@@ -1,6 +1,6 @@
 ﻿# SolarPanel
 
-Это проект для сбора и хранения данных с солнечных панелей, которые приходят через MQTT в формате JSON. Данные сохраняются в PostgreSQL.
+Это проект для сбора и хранения данных с солнечных панелей, которые приходят через MQTT в формате JSON. Данные сохраняются в SQLServer.
 
 ---
 
@@ -15,10 +15,10 @@
 
 ## Как поднять проект локально
 
-### 1. Запуск PostgreSQL через Docker
+### 1. Запуск SQLServer через Docker
 
 ```bash
-docker run -e POSTGRES_PASSWORD=Strongpassword1234 -e POSTGRES_DB=SolarPanel -p 5432:5432 --name pgsql -d postgres
+docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=Strongpassword1234" -e "MSSQL_PID=Developer" -p 1433:1433 --name sqlserver2022 -d mcr.microsoft.com/mssql/server:2022-latest
 ````
 
 Скачать и установить Docker: 

@@ -1,8 +1,8 @@
-﻿#nullable disable
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-using Microsoft.EntityFrameworkCore.Migrations;
+#nullable disable
 
-namespace SolarPanel.Infrastructure.Data.Migrations.App
+namespace SolarPanel.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration
