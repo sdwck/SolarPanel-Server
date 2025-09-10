@@ -67,13 +67,7 @@ public class MqttService : IDisposable
                 .WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
                 .WithTimeout(TimeSpan.FromSeconds(10))
                 .Build();
-
-            Console.WriteLine("Options:");
-            Console.WriteLine($"  Broker: {_settings.BrokerHost}");
-            Console.WriteLine($"  Port: {_settings.Port}");
-            Console.WriteLine($"  Username: {_settings.Username}");
-            Console.WriteLine($"  Password: {_settings.Password}");
-            Console.WriteLine($"  ClientId: {options.ClientId}");
+            
             var result = await _mqttClient.ConnectAsync(options);
 
             if (result.ResultCode == MqttClientConnectResultCode.Success)
