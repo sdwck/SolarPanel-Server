@@ -1,4 +1,4 @@
-﻿﻿using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,84 +10,147 @@ using SolarPanel.Infrastructure.Services;
 namespace SolarPanel.Infrastructure.BackgroundServices;
 
 public class MqttBackgroundService : BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<MqttBackgroundService> _logger;
+    private readonly MqttSettings _settings;
+    private readonly MqttService _mqttService;
+
+    public MqttBackgroundService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<MqttBackgroundService> logger,
+        IOptions<MqttSettings> settings,
+        MqttService mqttService)
     {
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<MqttBackgroundService> _logger;
-        private readonly MqttSettings _settings;
-        private readonly MqttService _mqttService;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+        _settings = settings.Value;
+        _mqttService = mqttService;
+    }   
 
-        public MqttBackgroundService(
-            IServiceScopeFactory scopeFactory,
-            ILogger<MqttBackgroundService> logger,
-            IOptions<MqttSettings> settings,
-            MqttService mqttService)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (_settings.UseMockData)
         {
-            _scopeFactory = scopeFactory;
-            _logger = logger;
-            _settings = settings.Value;
-            _mqttService = mqttService;
-        }   
+            _logger.LogInformation("Real MQTT service is disabled (UseMockData = true)");
+            return;
+        }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        _logger.LogInformation("Starting MQTT Background Service...");
+
+        var retryDelay = TimeSpan.FromSeconds(30);
+        var maxRetryDelay = TimeSpan.FromMinutes(5);
+
+        while (!stoppingToken.IsCancellationRequested)
         {
-            if (_settings.UseMockData)
-            {
-                _logger.LogInformation("Real MQTT service is disabled (UseMockData = true)");
-                return;
-            }
-
-            _logger.LogInformation("Real MQTT Background Service started");
-
             try
             {
-                Console.WriteLine("MQTT Settings:");
-                Console.WriteLine($"  BrokerHost: {_settings.BrokerHost}");
-                Console.WriteLine($"  Port: {_settings.Port}");
-                Console.WriteLine($"  Topic: {_settings.Topic}");
-                Console.WriteLine($"  UseMockData: {_settings.UseMockData}");
-                Console.WriteLine($"  Username: {_settings.Username}");
-                Console.WriteLine($"  Password: {_settings.Password}");
+                _logger.LogInformation("Attempting to connect to MQTT broker...");
+                
                 var connected = await _mqttService.ConnectAsync();
                 if (!connected)
                 {
-                    _logger.LogError("Failed to connect to MQTT broker. Service stopped.");
-                    return;
+                    _logger.LogWarning("Failed to connect to MQTT broker. Retrying in {Delay} seconds...", retryDelay.TotalSeconds);
+                    await Task.Delay(retryDelay, stoppingToken);
+                    
+                    retryDelay = retryDelay.TotalSeconds < maxRetryDelay.TotalSeconds 
+                        ? TimeSpan.FromSeconds(Math.Min(retryDelay.TotalSeconds * 1.5, maxRetryDelay.TotalSeconds))
+                        : maxRetryDelay;
+                    
+                    continue;
                 }
                 
+                retryDelay = TimeSpan.FromSeconds(30);
+                _logger.LogInformation("Successfully connected to MQTT broker, subscribing to topic: {Topic}", _settings.Topic);
+                
                 await _mqttService.SubscribeAsync(_settings.Topic, OnMessageReceived);
+                _logger.LogInformation("Successfully subscribed to MQTT topic: {Topic}", _settings.Topic);
 
-                while (!stoppingToken.IsCancellationRequested)
+                while (!stoppingToken.IsCancellationRequested && _mqttService.IsConnected())
                 {
                     await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in Real MQTT background service");
-            }
-        }
 
-        private async Task OnMessageReceived(string jsonMessage)
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var solarDataService = scope.ServiceProvider.GetRequiredService<ISolarDataService>();
-
-                var reading = JsonSerializer.Deserialize<SolarPanelDataJsonDto>(jsonMessage, new JsonSerializerOptions
+                if (!stoppingToken.IsCancellationRequested)
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                });
-
-                if (reading != null)
-                {
-                    await solarDataService.SaveSolarDataAsync(reading);
-                    _logger.LogInformation("Solar data saved successfully from MQTT");
+                    _logger.LogWarning("MQTT connection lost, attempting to reconnect...");
                 }
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("MQTT Background Service is stopping due to cancellation request");
+                break;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing MQTT message: {Message}", jsonMessage);
+                _logger.LogError(ex, "Error in MQTT background service. Retrying in {Delay} seconds...", retryDelay.TotalSeconds);
+                
+                try
+                {
+                    await Task.Delay(retryDelay, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                
+                retryDelay = retryDelay.TotalSeconds < maxRetryDelay.TotalSeconds 
+                    ? TimeSpan.FromSeconds(Math.Min(retryDelay.TotalSeconds * 1.5, maxRetryDelay.TotalSeconds))
+                    : maxRetryDelay;
             }
         }
+        
+        _logger.LogInformation("MQTT Background Service stopped");
     }
+
+    private async Task OnMessageReceived(string jsonMessage)
+    {
+        try
+        {
+            _logger.LogDebug("Processing MQTT message: {Message}", jsonMessage);
+            
+            using var scope = _scopeFactory.CreateScope();
+            var solarDataService = scope.ServiceProvider.GetRequiredService<ISolarDataService>();
+
+            var reading = JsonSerializer.Deserialize<SolarPanelDataJsonDto>(jsonMessage, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (reading != null)
+            {
+                await solarDataService.SaveSolarDataAsync(reading);
+                _logger.LogInformation("Solar data saved successfully from MQTT message");
+            }
+            else
+            {
+                _logger.LogWarning("Failed to deserialize MQTT message - result was null: {Message}", jsonMessage);
+            }
+        }
+        catch (JsonException jsonEx)
+        {
+            _logger.LogError(jsonEx, "JSON deserialization error for MQTT message: {Message}", jsonMessage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing MQTT message: {Message}", jsonMessage);
+        }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Stopping MQTT Background Service...");
+        
+        try
+        {
+            await _mqttService.DisconnectAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disconnecting MQTT service during shutdown");
+        }
+        
+        await base.StopAsync(cancellationToken);
+    }
+}
