@@ -13,6 +13,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<SolarPanelDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SolarData")));
+
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.Configure<MqttSettings>(builder.Configuration.GetSection("MqttSettings"));
@@ -21,10 +24,13 @@ builder.Services.AddScoped<ISolarDataRepository, SolarDataRepository>();
 builder.Services.AddScoped<ISolarDataService, SolarDataService>();
 builder.Services.AddSingleton<MqttService>();
 
-if (builder.Configuration.GetValue<bool>("MqttSettings:UseMockData"))
-    builder.Services.AddHostedService<MockMqttBackgroundService>();
-else
-    builder.Services.AddHostedService<MqttBackgroundService>();
+if (!builder.Environment.IsDevelopment())
+{
+    if (builder.Configuration.GetValue<bool>("MqttSettings:UseMockData"))
+        builder.Services.AddHostedService<MockMqttBackgroundService>();
+    else
+        builder.Services.AddHostedService<MqttBackgroundService>();
+}
 
 builder.Services.AddCors(options =>
 {
@@ -51,8 +57,13 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<SolarPanelDbContext>();
-    context.Database.Migrate();
+    var appDbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    appDbContext.Database.Migrate();
+    if (!app.Environment.IsDevelopment())
+    {
+        var solarPanelContext = scope.ServiceProvider.GetRequiredService<SolarPanelDbContext>();
+        solarPanelContext.Database.Migrate();
+    }
 }
 
 app.Run();
