@@ -4,6 +4,7 @@ using SolarPanel.Application.Interfaces;
 using SolarPanel.Core.Interfaces;
 using SolarPanel.Infrastructure.BackgroundServices;
 using SolarPanel.Infrastructure.Data;
+using SolarPanel.Infrastructure.Options;
 using SolarPanel.Infrastructure.Repositories;
 using SolarPanel.Infrastructure.Services;
 
@@ -20,9 +21,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.Configure<MqttSettings>(builder.Configuration.GetSection("MqttSettings"));
+builder.Services.Configure<RemoteScriptOptions>(builder.Configuration.GetSection("RemoteScript"));
 
 builder.Services.AddScoped<ISolarDataRepository, SolarDataRepository>();
 builder.Services.AddScoped<ISolarDataService, SolarDataService>();
+
+builder.Services.AddSingleton<IFileHashService, FileHashService>();
+builder.Services.AddSingleton<IScriptRepository, FileScriptRepository>();
+builder.Services.AddSingleton<IScriptService, ScriptService>();
 builder.Services.AddSingleton<MqttService>();
 
 if (!builder.Environment.IsDevelopment())

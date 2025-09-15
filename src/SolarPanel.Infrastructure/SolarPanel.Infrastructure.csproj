@@ -22,4 +22,10 @@
       <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions">
+        <HintPath>..\..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.7\Microsoft.AspNetCore.Hosting.Abstractions.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
 </Project>
