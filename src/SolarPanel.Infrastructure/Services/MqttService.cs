@@ -1,5 +1,6 @@
 ﻿using System.Security.Authentication;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MQTTnet;
@@ -67,7 +68,7 @@ public class MqttService : IDisposable
                 .WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
                 .WithTimeout(TimeSpan.FromSeconds(10))
                 .Build();
-            
+
             var result = await _mqttClient.ConnectAsync(options);
 
             if (result.ResultCode == MqttClientConnectResultCode.Success)
@@ -99,7 +100,7 @@ public class MqttService : IDisposable
                 throw new InvalidOperationException("Cannot subscribe - MQTT client is not connected");
             }
         }
-        
+
         if (_mqttClient != null)
         {
             _mqttClient.ApplicationMessageReceivedAsync -= OnApplicationMessageReceived;

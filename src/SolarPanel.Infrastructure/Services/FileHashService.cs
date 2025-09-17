@@ -9,8 +9,8 @@ public class FileHashService : IFileHashService
     private const int BufferSize = 81920;
 
     public async Task<(byte[] Sha256Hash, byte[] HmacHash)> ComputeHashesAsync(
-        string filePath, 
-        string secret, 
+        string filePath,
+        string secret,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(filePath);

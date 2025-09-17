@@ -25,6 +25,10 @@ builder.Services.Configure<RemoteScriptOptions>(builder.Configuration.GetSection
 
 builder.Services.AddScoped<ISolarDataRepository, SolarDataRepository>();
 builder.Services.AddScoped<ISolarDataService, SolarDataService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IHistoryService, HistoryService>();
+builder.Services.AddScoped<IPredictionService, PredictionService>();
+builder.Services.AddScoped<ISystemMetricsService, SystemMetricsService>();
 
 builder.Services.AddSingleton<IFileHashService, FileHashService>();
 builder.Services.AddSingleton<IScriptRepository, FileScriptRepository>();

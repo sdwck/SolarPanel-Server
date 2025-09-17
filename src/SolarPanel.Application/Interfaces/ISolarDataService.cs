@@ -8,6 +8,8 @@ public interface ISolarDataService
     Task<SolarDataDto?> GetLatestDataAsync();
     Task<SolarDataDto?> GetByIdAsync(int id);
     Task<SolarDataResponseDto> GetAllAsync(int page = 1, int pageSize = 50);
-    Task<IEnumerable<SolarDataDto>> GetByDateRangeAsync(DateTime from, DateTime to);
+
+    Task<IEnumerable<SolarDataDto>> GetByDateRangeAsync(DateTime from, DateTime to, int? gapInRecords = null,
+        int? count = null);
     Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv");
 }

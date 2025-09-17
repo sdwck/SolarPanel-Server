@@ -35,7 +35,6 @@ public class SolarDataService : ISolarDataService
             IsReserved = dataJsonDto.IsReserved == 1,
             Rsv1 = dataJsonDto.Rsv1,
             Rsv2 = dataJsonDto.Rsv2,
-
             BatteryData = new BatteryData
             {
                 BatteryVoltage = dataJsonDto.BatteryVoltage,
@@ -44,7 +43,6 @@ public class SolarDataService : ISolarDataService
                 BatteryDischargeCurrent = dataJsonDto.BatteryDischargeCurrent,
                 BatteryVoltageFromScc = dataJsonDto.BatteryVoltageFromScc
             },
-
             PowerData = new PowerData
             {
                 AcInputVoltage = dataJsonDto.AcInputVoltage,
@@ -89,9 +87,10 @@ public class SolarDataService : ISolarDataService
         };
     }
 
-    public async Task<IEnumerable<SolarDataDto>> GetByDateRangeAsync(DateTime from, DateTime to)
+    public async Task<IEnumerable<SolarDataDto>> GetByDateRangeAsync(DateTime from, DateTime to, int? gapInRecords = null, int? count = null)
     {
-        var data = await _repository.GetByDateRangeAsync(from, to);
+        if (from > to) throw new ArgumentException("'from' cannot be greater than 'to'");
+        var data = await _repository.GetByDateRangeAsync(from, to, gapInRecords, count);
         return data.Select(MapToDto);
     }
 
@@ -110,7 +109,6 @@ public class SolarDataService : ISolarDataService
             IsSccChargingOn = data.IsSccChargingOn,
             IsAcChargingOn = data.IsAcChargingOn,
             IsSwitchedOn = data.IsSwitchedOn,
-
             BatteryData = data.BatteryData != null
                 ? new BatteryDataDto
                 {
@@ -120,7 +118,6 @@ public class SolarDataService : ISolarDataService
                     BatteryDischargeCurrent = data.BatteryData.BatteryDischargeCurrent
                 }
                 : null,
-
             PowerData = data.PowerData != null
                 ? new PowerDataDto
                 {
@@ -137,18 +134,16 @@ public class SolarDataService : ISolarDataService
                 : null
         };
     }
+
     public async Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv")
     {
-        if (from > to)
-            throw new ArgumentException("'from' cannot be greater than 'to'");
+        if (from > to) throw new ArgumentException("'from' cannot быть больше 'to'");
 
         source = (source ?? "pv").Trim().ToLowerInvariant();
-        if (source != "pv" && source != "ac")
-            throw new ArgumentException("source must be 'pv' or 'ac'");
+        if (source != "pv" && source != "ac") throw new ArgumentException("source must be 'pv' or 'ac'");
 
         var data = await _repository.GetByDateRangeAsync(from, to);
 
-       
         var ordered = data
             .Where(d => d.PowerData != null)
             .OrderBy(d => d.Timestamp)
@@ -164,23 +159,12 @@ public class SolarDataService : ISolarDataService
 
             if (prev.PowerData == null || curr.PowerData == null) continue;
 
-            double p1 = source == "pv"
-                ? prev.PowerData.PvInputPower
-                : prev.PowerData.AcOutputActivePower;
+            double p1 = source == "pv" ? prev.PowerData.PvInputPower : prev.PowerData.AcOutputActivePower;
+            double p2 = source == "pv" ? curr.PowerData.PvInputPower : curr.PowerData.AcOutputActivePower;
 
-            double p2 = source == "pv"
-                ? curr.PowerData.PvInputPower
-                : curr.PowerData.AcOutputActivePower;
-
-            
             if (p1 < 0 || p2 < 0) continue;
 
-            
-            
-
-            
-            
-            var segmentKWh = ((p1 + p2) / 2.0)  * (1 / 60.0);
+            var segmentKWh = ((p1 + p2) / 2.0) * (1 / 60.0);
             energyWh += segmentKWh;
             samplesUsed++;
         }
@@ -190,9 +174,8 @@ public class SolarDataService : ISolarDataService
             From = from,
             To = to,
             EnergyKWh = Math.Round(energyWh / 1000.0, 4),
-            SamplesUsed = samplesUsed + 1, 
+            SamplesUsed = samplesUsed + 1,
             Source = source
         };
     }
-
 }

@@ -23,10 +23,11 @@ public class ScriptService : IScriptService
         _secret = options?.Value?.Secret ?? throw new ArgumentNullException(nameof(options));
     }
 
-    public async Task<ScriptMetadata?> GetScriptMetadataAsync(string scriptId, CancellationToken cancellationToken = default)
+    public async Task<ScriptMetadata?> GetScriptMetadataAsync(string scriptId,
+        CancellationToken cancellationToken = default)
     {
         var scriptPath = await _scriptRepository.GetScriptPathAsync(scriptId);
-        
+
         if (string.IsNullOrEmpty(scriptPath) || !await _scriptRepository.ScriptExistsAsync(scriptPath))
             return null;
 
@@ -48,7 +49,7 @@ public class ScriptService : IScriptService
         {
             var normalizedETag = NormalizeETag(metadata.ETag);
             var tokens = conditionalRequest.IfNoneMatch.Split(',').Select(t => t.Trim());
-            
+
             foreach (var token in tokens)
             {
                 if (token == "*" || NormalizeETag(token) == normalizedETag)
@@ -71,17 +72,17 @@ public class ScriptService : IScriptService
 
     private static string NormalizeETag(string raw)
     {
-        if (string.IsNullOrEmpty(raw)) 
+        if (string.IsNullOrEmpty(raw))
             return raw;
-        
+
         var normalized = raw.Trim();
-        
+
         if (normalized.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
             normalized = normalized[2..].Trim();
-        
+
         if (normalized is ['"', _, ..] && normalized[^1] == '"')
             normalized = normalized.Substring(1, normalized.Length - 2);
-        
+
         return normalized;
     }
 }
