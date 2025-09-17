@@ -7,25 +7,35 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SolarPanel.Application\SolarPanel.Application.csproj" />
+        <ProjectReference Include="..\SolarPanel.Application\SolarPanel.Application.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
-      <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
-      <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
+        <!-- Удалите устаревшую версию Microsoft.AspNetCore.Hosting -->
+        <!-- <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" /> -->
+
+        <!-- Добавьте актуальную абстракцию хостинга -->
+        <PackageReference Include="Assembly" Version="1.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
+
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
+        <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
+        <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
     </ItemGroup>
 
+    <!-- Удалите явную ссылку на локальную библиотеку, она создаст конфликты -->
+    <!--
     <ItemGroup>
       <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions">
         <HintPath>..\..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.7\Microsoft.AspNetCore.Hosting.Abstractions.dll</HintPath>
       </Reference>
     </ItemGroup>
+    -->
 
 </Project>

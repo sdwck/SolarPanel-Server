@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SolarPanel.Core.Interfaces;
 using SolarPanel.Infrastructure.Options;
@@ -7,10 +7,10 @@ namespace SolarPanel.Infrastructure.Repositories;
 
 public class FileScriptRepository : IScriptRepository
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly IHostEnvironment _environment;
     private readonly RemoteScriptOptions _options;
 
-    public FileScriptRepository(IWebHostEnvironment environment, IOptions<RemoteScriptOptions> options)
+    public FileScriptRepository(IHostEnvironment environment, IOptions<RemoteScriptOptions> options)
     {
         _environment = environment ?? throw new ArgumentNullException(nameof(environment));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));

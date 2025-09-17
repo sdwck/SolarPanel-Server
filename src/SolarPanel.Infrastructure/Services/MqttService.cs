@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MQTTnet;
 using SolarPanel.Infrastructure.BackgroundServices;
+using System.Text;
+using System.Text.Json;
+using SolarPanel.Application.DTOs;
 
 namespace SolarPanel.Infrastructure.Services;
 
@@ -23,6 +26,29 @@ public class MqttService : IDisposable
     public bool IsConnected()
     {
         return _mqttClient?.IsConnected ?? false;
+    }
+    public async Task PublishAsync(InverterCommandDto command)
+    {
+        if (_mqttClient == null || !_mqttClient.IsConnected)
+        {
+            _logger.LogWarning("MQTT client is not connected. Attempting to connect...");
+            var connected = await ConnectAsync();
+            if (!connected)
+            {
+                _logger.LogError("Cannot publish command. MQTT client not connected.");
+                return;
+            }
+        }
+
+        var payload = JsonSerializer.Serialize(command);
+        var message = new MQTTnet.MqttApplicationMessageBuilder()
+            .WithTopic(_settings.Topic)
+            .WithPayload(payload)
+            .WithRetainFlag(false)
+            .Build();
+
+        await _mqttClient.PublishAsync(message);
+        _logger.LogInformation("Published MQTT command: {Command}", command.CommandName);
     }
 
     public async Task<bool> ConnectAsync()
