@@ -64,8 +64,8 @@ const task = async () => {
                     const payload = JSON.stringify({
                         timestamp: new Date().toISOString(),
                         ...data,
-                        inverter_action: 'SBU_MODE',
                         current_mode: currentMode
+                        
                     });
 
                     client.publish(topic, payload);
