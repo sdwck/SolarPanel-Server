@@ -1,8 +1,18 @@
 ﻿const mqtt = require('mqtt');
 const { exec } = require('child_process');
 
+const execPromise = (cmd) => {
+    return new Promise((resolve, reject) => {
+        exec(cmd, (error, stdout) => {
+            if (error) return reject(error);
+            resolve(stdout);
+        });
+    });
+};
+
 const task = async () => {
-    const password = atob('UGFzc3dvcmQx');
+    const password = Buffer.from('UGFzc3dvcmQx', 'base64').toString('utf-8');
+
     const client = mqtt.connect({
         username: 'solar-panel-1',
         password: password,
@@ -17,63 +27,54 @@ const task = async () => {
     const topic = 'data';
 
     client.on('connect', () => {
-        console.log(`[${new Date().toISOString()}, Connected]`);
+        console.log(`[${new Date().toISOString()}] Connected to MQTT broker`);
 
-        setInterval(() => {
-            exec('mpp-solar -p /dev/ttyACM0 --porttype serial -c QPIGS -o json', (error, stdout) => {
-                if (error) {
-                    console.error(`[Error QPIGS] ${error.message}`);
-                    return;
-                }
+        setInterval(async () => {
+            let response = {};
 
-                let data;
+            try {
+                const qpigsOut = await execPromise('mpp-solar -p /dev/ttyACM0 --porttype serial -c QPIGS -o json');
+                const qpigsData = JSON.parse(qpigsOut);
+                response = { ...response, ...qpigsData };
+            } catch (err) {
+                console.error(`[Error QPIGS] ${err.message}`);
+            }
+
+            const queries = [
+                { cmd: 'QMOD', key: 'mode' },
+                { cmd: 'QPIRI', key: 'rating' },
+                { cmd: 'QPIWS', key: 'warnings' },
+                { cmd: 'QID', key: 'serial' },
+                { cmd: 'QVFW', key: 'firmware' },
+            ];
+
+            for (const { cmd, key } of queries) {
                 try {
-                    data = JSON.parse(stdout);
-                } catch (parseError) {
-                    console.error(`[JSON Error] ${parseError.message}`);
-                    return;
+                    const output = await execPromise(`mpp-solar -p /dev/ttyACM0 --porttype serial -c ${cmd} -o json`);
+                    response[key] = JSON.parse(output.trim());
+                } catch (err) {
+                    console.error(`[Error ${cmd}] ${err.message}`);
                 }
+            }
 
-
-
-               
-                exec('mpp-solar -p /dev/ttyACM0 --porttype serial -c POP02', (err) => {
-                    if (err) console.error(`[Error POP02] ${err.message}`);
-                });
-
-                
-                exec('mpp-solar -p /dev/ttyACM0 --porttype serial -c PCP01', (err) => {
-                    if (err) console.error(`[Error PCP01] ${err.message}`);
-                });
-
-                
-                exec('mpp-solar -p /dev/ttyACM0 --porttype serial -c QMOD -o json', (err, modOut) => {
-                    let currentMode = 'UNKNOWN';
-                    if (!err) {
-                        try {
-                            const modData = JSON.parse(modOut);
-                            currentMode = modData.mode || 'UNKNOWN';
-                        } catch (parseErr) {
-                            console.error(`[JSON Error QMOD] ${parseErr.message}`);
-                        }
-                    } else {
-                        console.error(`[Error QMOD] ${err.message}`);
-                    }
-
-                   
-                    const payload = JSON.stringify({
-                        timestamp: new Date().toISOString(),
-                        ...data,
-                        inverter_action: 'SBU_MODE',
-                        current_mode: currentMode
-                    });
-
-                    client.publish(topic, payload);
-                    console.log(`[Publish] ${payload}`);
-                });
-
+            const payload = JSON.stringify({
+                timestamp: new Date().toISOString(),
+                ...response
             });
-        }, 60000); 
+
+            client.publish(topic, payload, (err) => {
+                if (err) {
+                    console.error(`[MQTT Publish Error] ${err.message}`);
+                } else {
+                    console.log(`[Publish] ${payload}`);
+                }
+            });
+
+        }, 60000);
+    });
+
+    client.on('error', (err) => {
+        console.error(`[MQTT Error] ${err.message}`);
     });
 };
 

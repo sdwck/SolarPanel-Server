@@ -74,16 +74,17 @@ public class SolarDataService : ISolarDataService
         return data != null ? MapToDto(data) : null;
     }
 
-    public async Task<SolarDataResponseDto> GetAllAsync(int page = 1, int pageSize = 50)
+    public async Task<PaginatedResponse<SolarDataDto>> GetAllAsync(int page = 1, int pageSize = 50)
     {
         var data = await _repository.GetAllAsync(page, pageSize);
         var count = await _repository.GetTotalCountAsync();
-        return new SolarDataResponseDto
+        return new PaginatedResponse<SolarDataDto>
         {
-            Data = data.Select(MapToDto),
-            Page = page,
+            Items = data.Select(MapToDto),
+            PageNumber = page,
             PageSize = pageSize,
-            TotalCount = count
+            TotalCount = count,
+            TotalPages = (int)Math.Ceiling(count / (double)pageSize)
         };
     }
 

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using SolarPanel.Application.Interfaces;
 using SolarPanel.Core.Interfaces;
@@ -10,7 +12,12 @@ using SolarPanel.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -29,6 +36,8 @@ builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IHistoryService, HistoryService>();
 builder.Services.AddScoped<IPredictionService, PredictionService>();
 builder.Services.AddScoped<ISystemMetricsService, SystemMetricsService>();
+builder.Services.AddScoped<IMaintenanceTaskRepository, MaintenanceTaskRepository>();
+builder.Services.AddScoped<IMaintenanceTaskService, MaintenanceTaskService>();
 
 builder.Services.AddSingleton<IFileHashService, FileHashService>();
 builder.Services.AddSingleton<IScriptRepository, FileScriptRepository>();

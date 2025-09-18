@@ -28,7 +28,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<SolarDataResponseDto>> GetAll([FromQuery] int page = 1,
+    public async Task<ActionResult<PaginatedResponse<SolarDataDto>>> GetAll([FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
         try
