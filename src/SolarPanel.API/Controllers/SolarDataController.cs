@@ -158,6 +158,7 @@ public class SolarDataController : ControllerBase
         try
         {
             var analytics = await _analyticsService.GetAnalyticsDataAsync(timeRange);
+            
             return Ok(analytics);
         }
         catch (Exception ex)

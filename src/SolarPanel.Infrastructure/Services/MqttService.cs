@@ -43,13 +43,14 @@ public class MqttService : IDisposable
 
         var payload = JsonSerializer.Serialize(command);
         var message = new MQTTnet.MqttApplicationMessageBuilder()
-            .WithTopic(_settings.Topic)
+            .WithTopic("ChargeSwitch")
             .WithPayload(payload)
             .WithRetainFlag(false)
             .Build();
 
         await _mqttClient.PublishAsync(message);
-        _logger.LogInformation("Published MQTT command: {Command}", command.CommandName);
+        _logger.LogInformation("Published MQTT command: {Command}", command.CommandCharge);
+        _logger.LogInformation("Published MQTT command: {Command}", command.CommandLoad);
     }
 
     public async Task<bool> ConnectAsync()

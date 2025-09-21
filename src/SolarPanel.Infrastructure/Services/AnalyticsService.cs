@@ -12,6 +12,17 @@ public class AnalyticsService : IAnalyticsService
     {
         _repository = repository;
     }
+    private static int GetDaysInPeriod(string period)
+    {
+        return period.ToLower() switch
+        {
+            "day" => 1,
+            "week" => 7,
+            "month" => 30,
+            
+            _ => 1 
+        };
+    }
 
     public async Task<AnalyticsDataDto> GetAnalyticsDataAsync(string timeRange)
     {
@@ -53,12 +64,13 @@ public class AnalyticsService : IAnalyticsService
             else
                 daily[day] = (pv, ac);
         }
+        
 
-        var totalEfficiency = 90.0; // TODO: Replace with real efficiency calculation
-
+        var totalEfficiency = sumPv > 0 ? (sumAc / sumPv) * 100.0 : 0.0; 
+        int daysInPeriod = GetDaysInPeriod(timeRange);
         var dailyAverage = new DailyAverageDto
         {
-            SolarGeneration = Math.Round(totalCount > 0 ? sumPv / totalCount / 1000.0 : 0, 2),
+            SolarGeneration = Math.Round(totalCount > 0 ? (sumPv / 1000.0)/ daysInPeriod : 0, 2),
             BatteryUsage = Math.Round(batteryCount > 0 ? (sumBatteryCap / batteryCount) / 100.0 * 10.0 : 0, 2),
             Efficiency = Math.Round(totalEfficiency, 1),
             Uptime = Math.Round(totalCount > 0 ? (double)switchedOnCount / totalCount * 100.0 : 0, 1)

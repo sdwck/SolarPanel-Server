@@ -43,6 +43,9 @@ builder.Services.AddSingleton<IFileHashService, FileHashService>();
 builder.Services.AddSingleton<IScriptRepository, FileScriptRepository>();
 builder.Services.AddSingleton<IScriptService, ScriptService>();
 builder.Services.AddSingleton<MqttService>();
+builder.Services.AddSingleton<WeatherService>();
+builder.Services.AddSingleton<IWeatherService, WeatherService>();
+
 
 if (!builder.Environment.IsDevelopment())
 {

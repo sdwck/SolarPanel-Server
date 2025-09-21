@@ -86,6 +86,6 @@ public class PredictionService : IPredictionService
             EnergyKWh = Math.Round(predictedEnergy, 2),
             Confidence = confidence,
             Factors = factors
-        };
+        };  
     }
 }

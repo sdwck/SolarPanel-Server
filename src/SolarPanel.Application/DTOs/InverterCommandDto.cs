@@ -2,6 +2,7 @@
 {
     public class InverterCommandDto
     {
-        public string CommandName { get; set; } = string.Empty;
+        public string CommandLoad { get; set; } = string.Empty;
+        public string CommandCharge { get; set; } = string.Empty;
     }
 }
