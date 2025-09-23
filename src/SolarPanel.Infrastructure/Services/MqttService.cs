@@ -17,11 +17,34 @@ public class MqttService : IDisposable
     private readonly MqttSettings _settings;
     private readonly ILogger<MqttService> _logger;
     private bool _disposed;
+    private InverterCommandDto? _lastInverterMode;
 
     public MqttService(IOptions<MqttSettings> settings, ILogger<MqttService> logger)
     {
         _settings = settings.Value;
         _logger = logger;
+        _ = SubscribeToInverterMode();
+    }
+
+    private async Task SubscribeToInverterMode()
+    {
+        await SubscribeAsync("commands", async payload =>
+        {
+            try
+            {
+                var mode = JsonSerializer.Deserialize<InverterCommandDto>(payload);
+                if (mode != null)
+                {
+                    _lastInverterMode = mode;
+                    _logger.LogInformation($"[MQTT] Обновлен режим инвертора: Charge={mode.CommandCharge}, Load={mode.CommandLoad}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка парсинга режима инвертора из MQTT");
+            }
+            await Task.CompletedTask;
+        });
     }
 
     public bool IsConnected()
@@ -201,6 +224,11 @@ public class MqttService : IDisposable
     private Task OnApplicationMessageReceived(MqttApplicationMessageReceivedEventArgs args)
     {
         return Task.CompletedTask;
+    }
+
+    public Task<InverterCommandDto?> GetCurrentModeAsync()
+    {
+        return Task.FromResult(_lastInverterMode);
     }
 
     public void Dispose()

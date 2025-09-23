@@ -89,5 +89,22 @@ namespace SolarPanel.API.Controllers
                 return StatusCode(500, new { message = "Failed to send command to inverter", error = ex.Message });
             }
         }
+
+        [HttpGet("mode")]
+        public async Task<IActionResult> GetCurrentMode()
+        {
+            try
+            {
+                var mode = await _mqttService.GetCurrentModeAsync();
+                if (mode == null)
+                    return NotFound(new { success = false, error = "Не удалось получить режим работы инвертора" });
+                return Ok(new { success = true, data = mode });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при получении режима работы инвертора");
+                return StatusCode(500, new { success = false, error = ex.Message });
+            }
+        }
     }
 }

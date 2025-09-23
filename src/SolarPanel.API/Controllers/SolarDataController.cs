@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SolarPanel.Application.DTOs;
 using SolarPanel.Application.Interfaces;
+using SolarPanel.Infrastructure.Services;
 
 namespace SolarPanel.API.Controllers;
 
@@ -14,11 +15,12 @@ public class SolarDataController : ControllerBase
     private readonly IHistoryService _historyService;
     private readonly IPredictionService _predictionService;
     private readonly ISystemMetricsService _systemMetricsService;
+    private readonly IWeatherService _weatherService;
     private readonly ILogger<SolarDataController> _logger;
 
     public SolarDataController(ISolarDataService solarDataService, ILogger<SolarDataController> logger,
         IAnalyticsService analyticsService, IHistoryService historyService, IPredictionService predictionService,
-        ISystemMetricsService systemMetricsService)
+        ISystemMetricsService systemMetricsService, IWeatherService weatherService)
     {
         _solarDataService = solarDataService;
         _logger = logger;
@@ -26,6 +28,7 @@ public class SolarDataController : ControllerBase
         _historyService = historyService;
         _predictionService = predictionService;
         _systemMetricsService = systemMetricsService;
+        _weatherService = weatherService;
     }
     
     [HttpGet]
@@ -207,7 +210,42 @@ public class SolarDataController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
-
+    [HttpGet("prediction-external")]
+    [Authorize]
+    public async Task<IActionResult> GetPrediction([FromQuery] string period = "today", [FromQuery] double latitude = 47, [FromQuery] double longitude = 28)
+    {
+        try
+        {
+            object? prediction = null;
+            switch (period.ToLower())
+            {
+                case "today":
+                case "day":
+                    prediction = await _weatherService.GetBlendedDailySolarForecastAsync(latitude, longitude);
+                    break;
+                case "week":
+                    prediction = await _weatherService.GetBlendedWeeklySolarForecastAsync(latitude, longitude);
+                    break;
+                case "2weeks":
+                    prediction = await _weatherService.GetBlendedMonthlySolarForecastAsync(latitude, longitude);
+                    break;
+                default:
+                    return BadRequest(new { success = false, error = "Wrong prediction period" });
+            }
+            if (prediction == null || (prediction is IList<SolarRadiationForecastDto> list && list.Count == 0))
+                return NotFound(new { success = false, error = "Prediction not found" });
+            return Ok(new { success = true, data = prediction });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
+        }
+    }
+    
+    
+    
+    
+    
     [HttpGet("metrics")]
     [Authorize]
     public async Task<ActionResult<SystemMetricsDto>> GetSystemMetrics()
