@@ -23,7 +23,7 @@ public class PredictionService : IPredictionService
         return prediction;
     }
 
-    private async Task<List<Core.Entities.SolarData>> GetHistoricalDataForPrediction(string period)
+    private async Task<List<SolarData>> GetHistoricalDataForPrediction(string period)
     {
         var now = DateTime.UtcNow;
         var from = period.ToLower() switch

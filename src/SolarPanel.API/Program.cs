@@ -1,7 +1,8 @@
-using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SolarPanel.Application.Interfaces;
 using SolarPanel.Core.Interfaces;
 using SolarPanel.Infrastructure.BackgroundServices;
@@ -9,6 +10,8 @@ using SolarPanel.Infrastructure.Data;
 using SolarPanel.Infrastructure.Options;
 using SolarPanel.Infrastructure.Repositories;
 using SolarPanel.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +22,36 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "SolarPanel API", Version = "v1" });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header
+            },
+            []
+        }
+    });
+});
 
 builder.Services.AddDbContext<SolarPanelDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SolarData")));
@@ -38,6 +70,8 @@ builder.Services.AddScoped<IPredictionService, PredictionService>();
 builder.Services.AddScoped<ISystemMetricsService, SystemMetricsService>();
 builder.Services.AddScoped<IMaintenanceTaskRepository, MaintenanceTaskRepository>();
 builder.Services.AddScoped<IMaintenanceTaskService, MaintenanceTaskService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddSingleton<IFileHashService, FileHashService>();
 builder.Services.AddSingleton<IScriptRepository, FileScriptRepository>();
@@ -46,7 +80,6 @@ builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<WeatherService>();
 builder.Services.AddSingleton<IWeatherService, WeatherService>();
 
-
 if (!builder.Environment.IsDevelopment())
 {
     if (builder.Configuration.GetValue<bool>("MqttSettings:UseMockData"))
@@ -54,6 +87,25 @@ if (!builder.Environment.IsDevelopment())
     else
         builder.Services.AddHostedService<MqttBackgroundService>();
 }
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]
+                ?? throw new InvalidOperationException("JWT Key is not configured"))),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
 {
@@ -82,6 +134,9 @@ using (var scope = app.Services.CreateScope())
 {
     var appDbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     appDbContext.Database.Migrate();
+
+    appDbContext.SeedUser(builder.Configuration);
+
     if (!app.Environment.IsDevelopment())
     {
         var solarPanelContext = scope.ServiceProvider.GetRequiredService<SolarPanelDbContext>();

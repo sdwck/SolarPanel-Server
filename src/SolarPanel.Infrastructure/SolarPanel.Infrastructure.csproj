@@ -16,6 +16,7 @@
 
         <!-- Добавьте актуальную абстракцию хостинга -->
         <PackageReference Include="Assembly" Version="1.0.0" />
+        <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
 
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />

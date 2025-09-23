@@ -43,6 +43,12 @@ dotnet user-secrets set "MqttSettings:Username" "my-mqtt-username"
 dotnet user-secrets set "MqttSettings:Password" "my-mqtt-password"
 ```
 
+Установите JWT секрет:
+
+```bash
+dotnet user-secrets set "Jwt:Key" "c48d84853fa3f8c00555bcd91e0461de"
+```
+
 **Важно:** Убедитесь, что у вас установлен .NET SDK, иначе команда `dotnet` не сработает.
 
 Скачать .NET SDK:

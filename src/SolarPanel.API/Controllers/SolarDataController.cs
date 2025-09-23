@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SolarPanel.Application.DTOs;
 using SolarPanel.Application.Interfaces;
 
@@ -26,8 +27,9 @@ public class SolarDataController : ControllerBase
         _predictionService = predictionService;
         _systemMetricsService = systemMetricsService;
     }
-
+    
     [HttpGet]
+    [Authorize]
     public async Task<ActionResult<PaginatedResponse<SolarDataDto>>> GetAll([FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
@@ -47,6 +49,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("latest")]
+    [Authorize]
     public async Task<ActionResult<SolarDataDto>> GetLatest()
     {
         try
@@ -66,6 +69,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<SolarDataDto>> GetById(int id)
     {
         try
@@ -85,6 +89,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("range")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<SolarDataDto>>> GetByDateRange(
         [FromQuery] DateTime from,
         [FromQuery] DateTime to,
@@ -109,6 +114,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("{id:int}/battery")]
+    [Authorize]
     public async Task<ActionResult<BatteryDataDto>> GetBatteryData(int id)
     {
         try
@@ -128,6 +134,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("energy")]
+    [Authorize]
     public async Task<ActionResult<EnergyResponseDto>> GetEnergy(
         [FromQuery] DateTime from,
         [FromQuery] DateTime to,
@@ -153,6 +160,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("analytics")]
+    [Authorize]
     public async Task<ActionResult<AnalyticsDataDto>> GetAnalytics([FromQuery] string timeRange = "week")
     {
         try
@@ -168,6 +176,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("history")]
+    [Authorize]
     public async Task<ActionResult<List<HistoryDataDto>>> GetHistory(
         [FromQuery] string timeRange = "today",
         [FromQuery] DateTime? from = null,
@@ -185,6 +194,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("prediction")]
+    [Authorize]
     public async Task<ActionResult<PredictionDataDto>> GetPrediction([FromQuery] string period = "today")
     {
         try
@@ -199,6 +209,7 @@ public class SolarDataController : ControllerBase
     }
 
     [HttpGet("metrics")]
+    [Authorize]
     public async Task<ActionResult<SystemMetricsDto>> GetSystemMetrics()
     {
         try

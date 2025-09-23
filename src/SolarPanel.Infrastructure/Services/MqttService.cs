@@ -30,7 +30,7 @@ public class MqttService : IDisposable
     }
     public async Task PublishAsync(InverterCommandDto command)
     {
-        if (_mqttClient == null || !_mqttClient.IsConnected)
+        if (_mqttClient is not { IsConnected: true })
         {
             _logger.LogWarning("MQTT client is not connected. Attempting to connect...");
             var connected = await ConnectAsync();
@@ -42,13 +42,13 @@ public class MqttService : IDisposable
         }
 
         var payload = JsonSerializer.Serialize(command);
-        var message = new MQTTnet.MqttApplicationMessageBuilder()
-            .WithTopic("ChargeSwitch")
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic("commands")
             .WithPayload(payload)
             .WithRetainFlag(false)
             .Build();
 
-        await _mqttClient.PublishAsync(message);
+        if (_mqttClient is not null) await _mqttClient.PublishAsync(message);
         _logger.LogInformation("Published MQTT command: {Command}", command.CommandCharge);
         _logger.LogInformation("Published MQTT command: {Command}", command.CommandLoad);
     }

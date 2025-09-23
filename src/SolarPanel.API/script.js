@@ -1,7 +1,6 @@
 const mqtt = require('mqtt');
 const { exec } = require('child_process');
 
-// Configuration
 const config = {
     mqtt: {
         username: 'solar-panel-1',
@@ -15,23 +14,21 @@ const config = {
     },
     topics: {
         data: 'data',
-        chargeSwitch: 'ChargeSwitch'
+        chargeSwitch: 'commands'
     },
     device: {
         port: '/dev/ttyACM0',
         portType: 'serial'
     },
-    pollingInterval: 60000 // 1 minute
+    pollingInterval: 60000
 };
 
-// State management
 let state = {
     currentBatteryMode: '',
     currentLoadMode: '',
     isConnected: false
 };
 
-// MQTT client management
 function setupMqttClient() {
     const client = mqtt.connect({
         username: config.mqtt.username,
@@ -44,7 +41,6 @@ function setupMqttClient() {
         rejectUnauthorized: config.mqtt.rejectUnauthorized
     });
 
-    // Set up event handlers
     client.on('connect', () => handleConnect(client));
     client.on('message', (topic, message) => handleMessage(client, topic, message));
     client.on('error', handleError);
@@ -54,7 +50,6 @@ function setupMqttClient() {
     return client;
 }
 
-// Event handlers
 function handleConnect(client) {
     state.isConnected = true;
     console.log(`[${new Date().toISOString()}] Connected to MQTT broker`);
@@ -87,7 +82,6 @@ function handleMessage(client, topic, message) {
     }
 }
 
-// Subscription management
 function subscribeToTopics(client) {
     client.subscribe(config.topics.chargeSwitch, (err) => {
         if (err) {
@@ -98,10 +92,8 @@ function subscribeToTopics(client) {
     });
 }
 
-// Command execution
 function executeCommand(command, type) {
     return new Promise((resolve, reject) => {
-        // Validate command to prevent command injection
         if (!validateCommand(command)) {
             reject(new Error(`Invalid command: ${command}`));
             return;
@@ -121,7 +113,6 @@ function executeCommand(command, type) {
 }
 
 function validateCommand(command) {
-    // Basic validation - only allow alphanumeric characters and specific symbols
     const validCommandPattern = /^[a-zA-Z0-9_]+$/;
     return validCommandPattern.test(command);
 }
@@ -149,12 +140,9 @@ function processSwitchCommands(data) {
     }
 }
 
-// Data collection and publishing
 function startDataPolling(client) {
-    // Initial poll
     pollAndPublishData(client);
     
-    // Set up interval for regular polling
     setInterval(() => pollAndPublishData(client), config.pollingInterval);
 }
 
@@ -183,10 +171,7 @@ async function collectInverterData() {
         const inverterSettings = await executeQpiri();
 
         return {
-            pv_to_load: currentData.pv_input_power || 0,
-            load_power: currentData.ac_output_active_power || 0,
-            grid_power: currentData.ac_input_voltage > 0 ? currentData.ac_output_active_power : 0,
-            battery_soc: currentData.battery_capacity || 0,
+            ...currentData,
             inverter_settings: inverterSettings
         };
     } catch (error) {
@@ -214,11 +199,11 @@ function executeQpigs() {
 }
 
 function executeQpiri() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         exec(`mpp-solar -p ${config.device.port} --porttype ${config.device.portType} -c QPIRI -o json`, (err, stdout) => {
             if (err) {
                 console.error('[QPIRI Error]', err.message);
-                resolve({}); // Return empty object on error, don't fail the whole data collection
+                resolve({});
                 return;
             }
 
@@ -233,28 +218,13 @@ function executeQpiri() {
     });
 }
 
-// Main execution
 function main() {
     try {
-        const client = setupMqttClient();
-        
-        // Handle application termination
-        process.on('SIGINT', () => {
-            console.log('Terminating application...');
-            if (client && client.connected) {
-                client.end(true, () => {
-                    console.log('MQTT client disconnected');
-                    process.exit(0);
-                });
-            } else {
-                process.exit(0);
-            }
-        });
+        setupMqttClient();
     } catch (error) {
         console.error('Failed to start application:', error.message);
         process.exit(1);
     }
 }
 
-// Start the application
 main();
