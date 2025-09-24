@@ -1,9 +1,8 @@
-﻿using System;
+﻿#nullable disable
+
 using Microsoft.EntityFrameworkCore.Migrations;
 
-#nullable disable
-
-namespace SolarPanel.Infrastructure.Data.Migrations
+namespace SolarPanel.Infrastructure.Data.Migrations.App
 {
     /// <inheritdoc />
     public partial class AddAuthentication : Migration

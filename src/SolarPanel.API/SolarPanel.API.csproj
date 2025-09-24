@@ -25,10 +25,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="python-services\"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <None Update="script.js">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

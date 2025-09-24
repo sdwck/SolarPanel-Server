@@ -10,12 +10,8 @@ public class AppDbContext : DbContext
     public DbSet<MaintenanceTask> MaintenanceTasks { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<ModeResult> ModeResults { get; set; }
-    private readonly IConfiguration _configuration;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration) : base(options)
-    {
-        _configuration = configuration;
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +42,13 @@ public class AppDbContext : DbContext
                     v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
                 )
                 .Metadata.SetValueComparer(stringListComparer);
+        });
+        
+        modelBuilder.Entity<ModeResult>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BatteryMode).IsRequired();
+            entity.Property(e => e.LoadMode).IsRequired();
         });
 
         base.OnModelCreating(modelBuilder);

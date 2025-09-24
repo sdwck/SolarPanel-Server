@@ -72,7 +72,6 @@ builder.Services.AddScoped<IMaintenanceTaskRepository, MaintenanceTaskRepository
 builder.Services.AddScoped<IMaintenanceTaskService, MaintenanceTaskService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IModeResultService, ModeResultService>();
 builder.Services.AddScoped<IModeResultRepository, ModeResultRepository>();
 
 builder.Services.AddSingleton<IFileHashService, FileHashService>();
