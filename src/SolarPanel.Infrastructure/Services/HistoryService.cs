@@ -48,7 +48,7 @@ public class HistoryService : IHistoryService
     private static HistoryDataDto MapToHistoryDto(SolarData data)
     {
         var efficiency = data.PowerData!.PvInputPower > 0
-            ? data.PowerData.AcOutputActivePower / data.PowerData.PvInputPower * 100
+            ? data.PowerData.PvInputPower / (data.PowerData.PvInputPower+data.PowerData.AcOutputActivePower) * 100
             : 0;
 
         var status = efficiency switch

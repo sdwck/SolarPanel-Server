@@ -7,7 +7,10 @@ using MQTTnet;
 using SolarPanel.Infrastructure.BackgroundServices;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using SolarPanel.Application.DTOs;
+using SolarPanel.Application.Interfaces;
+using SolarPanel.Core.Entities;
 
 namespace SolarPanel.Infrastructure.Services;
 
@@ -18,12 +21,15 @@ public class MqttService : IDisposable
     private readonly ILogger<MqttService> _logger;
     private bool _disposed;
     private InverterCommandDto? _lastInverterMode;
+    private readonly IServiceProvider _serviceProvider;
 
-    public MqttService(IOptions<MqttSettings> settings, ILogger<MqttService> logger)
+    public MqttService(IOptions<MqttSettings> settings, ILogger<MqttService> logger, IServiceProvider serviceProvider)
     {
         _settings = settings.Value;
         _logger = logger;
+        _serviceProvider = serviceProvider;
         _ = SubscribeToInverterMode();
+        _ = SubscribeToModeResult();
     }
 
     private async Task SubscribeToInverterMode()
@@ -35,8 +41,11 @@ public class MqttService : IDisposable
                 var mode = JsonSerializer.Deserialize<InverterCommandDto>(payload);
                 if (mode != null)
                 {
-                    _lastInverterMode = mode;
-                    _logger.LogInformation($"[MQTT] Обновлен режим инвертора: Charge={mode.CommandCharge}, Load={mode.CommandLoad}");
+                    using (var scope = _serviceProvider.CreateScope())
+                    {
+                        var modeResultService = scope.ServiceProvider.GetRequiredService<IModeResultService>();
+                        // Здесь можно использовать modeResultService для сохранения или обработки
+                    }
                 }
             }
             catch (Exception ex)
@@ -45,6 +54,32 @@ public class MqttService : IDisposable
             }
             await Task.CompletedTask;
         });
+    }
+
+    private async Task SubscribeToModeResult()
+    {
+        await SubscribeAsync("mode_result", async payload =>
+        {
+            try
+            {
+                var modeResult = JsonSerializer.Deserialize<ModeResultDto>(payload);
+                if (modeResult != null)
+                {
+                    using (var scope = _serviceProvider.CreateScope())
+                    {
+                        var modeResultService = scope.ServiceProvider.GetRequiredService<IModeResultService>();
+                        await modeResultService.SaveModeResultAsync(modeResult);
+                        _logger.LogInformation($"[MQTT] Сохранён режим: BatteryMode={modeResult.BatteryMode}, LoadMode={modeResult.LoadMode}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка парсинга режима инвертора из MQTT");
+            }
+            await Task.CompletedTask;
+        });
+        
     }
 
     public bool IsConnected()

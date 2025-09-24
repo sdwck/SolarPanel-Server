@@ -79,6 +79,27 @@ namespace SolarPanel.Infrastructure.Data.Migrations
                     b.ToTable("MaintenanceTasks");
                 });
 
+            modelBuilder.Entity("SolarPanel.Core.Entities.ModeResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatteryMode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LoadMode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ModeResults");
+                });
+
             modelBuilder.Entity("SolarPanel.Core.Entities.User", b =>
                 {
                     b.Property<int>("Id")

@@ -14,7 +14,8 @@ const config = {
     },
     topics: {
         data: 'data',
-        chargeSwitch: 'commands'
+        chargeSwitch: 'commands',
+        modeResult: 'mode_result'
     },
     device: {
         port: '/dev/ttyACM0',
@@ -75,7 +76,7 @@ function handleMessage(client, topic, message) {
     if (topic === config.topics.chargeSwitch) {
         try {
             const data = JSON.parse(message.toString());
-            processSwitchCommands(data);
+            processSwitchCommands(data, client);
         } catch (err) {
             console.error('[MQTT JSON Error]', err.message);
         }
@@ -92,7 +93,7 @@ function subscribeToTopics(client) {
     });
 }
 
-function executeCommand(command, type) {
+function executeCommand(command, type, client) {
     return new Promise((resolve, reject) => {
         if (!validateCommand(command)) {
             reject(new Error(`Invalid command: ${command}`));
@@ -106,6 +107,12 @@ function executeCommand(command, type) {
                 reject(err);
             } else {
                 console.log(`[${type}] Executed command: ${command}`);
+                
+                const payload = JSON.stringify({
+                    batteryMode: state.currentBatteryMode,
+                    loadMode: state.currentLoadMode
+                });
+                client.publish(config.topics.modeResult, payload);
                 resolve(stdout);
             }
         });
@@ -117,12 +124,12 @@ function validateCommand(command) {
     return validCommandPattern.test(command);
 }
 
-function processSwitchCommands(data) {
+function processSwitchCommands(data, client) {
     const newBatteryMode = data.CommandCharge || '';
     const newLoadMode = data.CommandLoad || '';
 
     if (newBatteryMode && newBatteryMode !== state.currentBatteryMode) {
-        executeCommand(newBatteryMode, 'PCP')
+        executeCommand(newBatteryMode, 'PCP', client)
             .then(() => {
                 state.currentBatteryMode = newBatteryMode;
                 console.log(`[PCP] Applied new battery mode: ${newBatteryMode}`);
@@ -131,7 +138,7 @@ function processSwitchCommands(data) {
     }
 
     if (newLoadMode && newLoadMode !== state.currentLoadMode) {
-        executeCommand(newLoadMode, 'POP')
+        executeCommand(newLoadMode, 'POP', client)
             .then(() => {
                 state.currentLoadMode = newLoadMode;
                 console.log(`[POP] Applied new load mode: ${newLoadMode}`);

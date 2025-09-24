@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Configuration;
 using SolarPanel.Core.Entities;
 
@@ -8,6 +9,7 @@ public class AppDbContext : DbContext
 {
     public DbSet<MaintenanceTask> MaintenanceTasks { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<ModeResult> ModeResults { get; set; }
     private readonly IConfiguration _configuration;
 
     public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration) : base(options)
@@ -17,6 +19,11 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var stringListComparer = new ValueComparer<List<string>>(
+            (c1, c2) => c1.SequenceEqual(c2),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList());
+
         modelBuilder.Entity<MaintenanceTask>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -24,7 +31,8 @@ public class AppDbContext : DbContext
                 .HasConversion(
                     v => string.Join(',', v),
                     v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                );
+                )
+                .Metadata.SetValueComparer(stringListComparer);
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -36,7 +44,8 @@ public class AppDbContext : DbContext
                 .HasConversion(
                     v => string.Join(',', v),
                     v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                );
+                )
+                .Metadata.SetValueComparer(stringListComparer);
         });
 
         base.OnModelCreating(modelBuilder);

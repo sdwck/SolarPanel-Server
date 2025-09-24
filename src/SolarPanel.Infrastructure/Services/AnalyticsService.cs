@@ -66,7 +66,7 @@ public class AnalyticsService : IAnalyticsService
         }
         
 
-        var totalEfficiency = sumPv > 0 ? (sumAc / sumPv) * 100.0 : 0.0; 
+        var totalEfficiency = sumPv > 0 ? (sumPv / (sumAc+sumPv)) * 100.0 : 0.0; 
         int daysInPeriod = GetDaysInPeriod(timeRange);
         var dailyAverage = new DailyAverageDto
         {

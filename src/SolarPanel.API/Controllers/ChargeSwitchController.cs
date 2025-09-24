@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SolarPanel.Application.DTOs;
+using SolarPanel.Application.Interfaces;
 using SolarPanel.Infrastructure.Services;
 
 namespace SolarPanel.API.Controllers
@@ -10,11 +11,13 @@ namespace SolarPanel.API.Controllers
     {
         private readonly MqttService _mqttService;
         private readonly ILogger<ChargeSwitchController> _logger;
+        private readonly IModeResultService _modeResultService;
 
-        public ChargeSwitchController(MqttService mqttService, ILogger<ChargeSwitchController> logger)
+        public ChargeSwitchController(MqttService mqttService, ILogger<ChargeSwitchController> logger, IModeResultService modeResultService)
         {
             _mqttService = mqttService;
             _logger = logger;
+            _modeResultService = modeResultService;
         }
 
 
@@ -31,6 +34,9 @@ namespace SolarPanel.API.Controllers
                     break;
                 case "PCP03":
                     command = "PCP03"; 
+                    break;
+                case "PCP02":
+                    command = "PCP02"; 
                     break;
                 default:
                     return BadRequest("Invalid battery charge option. Use PCP00 or PCP03.");
@@ -95,7 +101,7 @@ namespace SolarPanel.API.Controllers
         {
             try
             {
-                var mode = await _mqttService.GetCurrentModeAsync();
+                var mode = await _modeResultService.GetCurrentModeResultAsync();
                 if (mode == null)
                     return NotFound(new { success = false, error = "Не удалось получить режим работы инвертора" });
                 return Ok(new { success = true, data = mode });
