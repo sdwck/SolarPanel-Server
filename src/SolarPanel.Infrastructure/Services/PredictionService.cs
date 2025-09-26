@@ -14,7 +14,6 @@ public class PredictionService : IPredictionService
         _repository = repository;
     }
 
-    // Добавить учёт погоды и пр. либо интеграцию с внешними API
     public async Task<PredictionDataDto> GetPredictionAsync(string period)
     {
         var historicalData = await GetHistoricalDataForPrediction(period);

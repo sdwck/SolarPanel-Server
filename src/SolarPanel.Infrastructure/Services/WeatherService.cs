@@ -83,7 +83,7 @@ namespace SolarPanel.Infrastructure.Services
         public async Task<List<SolarRadiationForecastDto>> GetMonthlySolarForecastAsync(double latitude, double longitude)
         {
             var start = DateTime.UtcNow.Date;
-            var end = start.AddDays(15); // Open-Meteo поддерживает максимум 16 дней прогноза
+            var end = start.AddDays(15);
             var url = $"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&daily=shortwave_radiation_sum&timezone=UTC&start_date={start:yyyy-MM-dd}&end_date={end:yyyy-MM-dd}";
             var response = await _httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode) return new List<SolarRadiationForecastDto>();
@@ -182,12 +182,12 @@ namespace SolarPanel.Infrastructure.Services
             {
                 for (int i = 0; i < Math.Min(30, dates.Count()); i++)
                 {
-                    double radiation = radiationArr[i].Value<double>();
-                    double totalRadiation = radiation * PanelArea * PanelCount * Efficiency * MeasurementEfficiency;
+                    var radiation = radiationArr[i].Value<double>();
+                    var totalRadiation = radiation * PanelArea * PanelCount * Efficiency * MeasurementEfficiency;
                    
                     double maxDaylightHours = 10; 
-                    double inverterMaxEnergy = InverterLimit / 1000 * maxDaylightHours; 
-                    double estimatedEnergy = Math.Min(totalRadiation, inverterMaxEnergy);
+                    var inverterMaxEnergy = InverterLimit / 1000 * maxDaylightHours; 
+                    var estimatedEnergy = Math.Min(totalRadiation, inverterMaxEnergy);
                     result.Add(new SolarRadiationForecastDto
                     {
                         Date = DateTime.Parse(dates[i].Value<string>()),
@@ -205,18 +205,11 @@ namespace SolarPanel.Infrastructure.Services
             var today = DateTime.UtcNow.Date;
             var forecast = await GetDailySolarForecastAsync(latitude, longitude);
             var history = await GetHistoricalSolarForecastAsync(latitude, longitude, today);
-            if (forecast == null && history == null) return null;
-            double blendedEnergy = 0;
-            if (forecast != null && history != null)
-                blendedEnergy = 0.6 * forecast.EstimatedEnergy + 0.4 * history.EstimatedEnergy;
-            else if (forecast != null)
-                blendedEnergy = forecast.EstimatedEnergy;
-            else if (history != null)
-                blendedEnergy = history.EstimatedEnergy;
+            var blendedEnergy = 0.6 * forecast.EstimatedEnergy + 0.4 * history.EstimatedEnergy;
             return new SolarRadiationForecastDto
             {
                 Date = today,
-                Radiation = forecast?.Radiation ?? history?.Radiation ?? 0,
+                Radiation = forecast.Radiation,
                 EstimatedEnergy = blendedEnergy
             };
         }

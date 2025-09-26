@@ -1,4 +1,4 @@
-﻿using SolarPanel.Application.DTOs;
+using SolarPanel.Application.DTOs;
 using SolarPanel.Application.Interfaces;
 using SolarPanel.Core.Entities;
 using SolarPanel.Core.Interfaces;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SolarPanel.Application.DTOs;
 using SolarPanel.Application.Interfaces;
+using SolarPanel.Core.Interfaces;
 using SolarPanel.Infrastructure.Services;
 
 namespace SolarPanel.API.Controllers
@@ -11,49 +12,45 @@ namespace SolarPanel.API.Controllers
     {
         private readonly MqttService _mqttService;
         private readonly ILogger<ChargeSwitchController> _logger;
-        private readonly IModeResultService _modeResultService;
+        private readonly IModeResultRepository _modeResultRepository;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ChargeSwitchController(MqttService mqttService, ILogger<ChargeSwitchController> logger, IModeResultService modeResultService)
+        public ChargeSwitchController(MqttService mqttService, ILogger<ChargeSwitchController> logger,
+            IModeResultRepository modeResultRepository, IWebHostEnvironment webHostEnvironment)
         {
             _mqttService = mqttService;
             _logger = logger;
-            _modeResultService = modeResultService;
+            _modeResultRepository = modeResultRepository;
+            _webHostEnvironment = webHostEnvironment;
         }
 
 
         [HttpPost("battery")]
         public async Task<IActionResult> SetBatteryChargePriority([FromQuery] string option)
         {
- 
-            string command;
-
-            switch (option)
+            if (_webHostEnvironment.IsDevelopment())
             {
-                case "PCP00":
-                    command = "PCP00"; 
-                    break;
-                case "PCP03":
-                    command = "PCP03"; 
-                    break;
-                case "PCP02":
-                    command = "PCP02"; 
-                    break;
-                default:
-                    return BadRequest("Invalid battery charge option. Use PCP00 or PCP03.");
+                _logger.LogInformation("Development environment detected - skipping MQTT command publish.");
+                return Ok(new { message = "Cannot set battery charge priority in development environment.", option });
+            }
+            
+            var availableOptions = new[] { "PCP00", "PCP01", "PCP02", "PCP03" };
+
+            if (!availableOptions.Contains(option))
+            {
+                return BadRequest(
+                    $"Invalid battery charge option. Available options are: {string.Join(", ", availableOptions)}");
             }
 
-           
-            var commandDto = new InverterCommandDto { CommandCharge = command };
-            
+            var commandDto = new InverterCommandDto { CommandCharge = option };
+
             try
             {
                 await _mqttService.PublishAsync(commandDto);
-                _logger.LogInformation("Sent battery charge command: {Command}", command);
-                return Ok(new { message = "Battery charge priority set.", command });
+                return Ok(new { message = "Battery charge priority set.", option });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending battery charge command: {Command}", command);
                 return StatusCode(500, new { message = "Failed to send command to inverter", error = ex.Message });
             }
         }
@@ -62,36 +59,29 @@ namespace SolarPanel.API.Controllers
         [HttpPost("load")]
         public async Task<IActionResult> SetLoadSourcePriority([FromQuery] string option)
         {
-
-            string command;
-
-            switch (option)
+            if (_webHostEnvironment.IsDevelopment())
             {
-                case "POP00":
-                    command = "POP00";
-                    break;
-                case "POP01":
-                    command = "POP01";
-                    break;
-                case "POP02":
-                    command = "POP02";
-                    break;
-                default:
-                    return BadRequest("Invalid load source option. Use POP00, POP01, or POP02.");
+                _logger.LogInformation("Development environment detected - skipping MQTT command publish.");
+                return Ok(new { message = "Cannot set load source priority in development environment.", option });
+            }
+            
+            var availableOptions = new[] { "POP00", "POP01", "POP02" };
+
+            if (!availableOptions.Contains(option))
+            {
+                return BadRequest(
+                    $"Invalid load source option. Available options are: {string.Join(", ", availableOptions)}");
             }
 
+            var commandDto = new InverterCommandDto { CommandLoad = option };
 
-            var commandDto = new InverterCommandDto { CommandLoad = command };
-            
             try
             {
                 await _mqttService.PublishAsync(commandDto);
-                _logger.LogInformation("Sent load source command: {Command}", command);
-                return Ok(new { message = "Load source priority set.", command });
+                return Ok(new { message = "Load source priority set.", option });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending load source command: {Command}", command);
                 return StatusCode(500, new { message = "Failed to send command to inverter", error = ex.Message });
             }
         }
@@ -101,15 +91,13 @@ namespace SolarPanel.API.Controllers
         {
             try
             {
-                var mode = await _modeResultService.GetCurrentModeResultAsync();
-                if (mode == null)
-                    return NotFound(new { success = false, error = "Не удалось получить режим работы инвертора" });
-                return Ok(new { success = true, data = mode });
+                var mode = await _modeResultRepository.GetModeResultAsync();
+                return Ok(new { data = mode });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при получении режима работы инвертора");
-                return StatusCode(500, new { success = false, error = ex.Message });
+                _logger.LogError(ex, "Error retrieving current inverter mode");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
     }

@@ -1,5 +1,5 @@
 const mqtt = require('mqtt');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 
 const config = {
     mqtt: {
@@ -30,6 +30,34 @@ let state = {
     isConnected: false
 };
 
+let serialQueue = Promise.resolve();
+
+function enqueueMpp(fn) {
+    serialQueue = serialQueue.then(() => fn()).catch(err => {
+        console.error('[Queue Error]', err.message);
+    });
+    return serialQueue;
+}
+
+function execMppCommand(command, timeoutMs = 10000) {
+    const args = [
+        '-p', config.device.port,
+        '--porttype', config.device.portType,
+        '-c', command
+    ];
+
+    return new Promise((resolve, reject) => {
+        execFile('mpp-solar', args, { timeout: timeoutMs }, (err, stdout, stderr) => {
+            if (err) {
+                console.error(`[mpp-solar error]`, err.message, stderr || '');
+                reject(new Error(err.message));
+                return;
+            }
+            resolve({ stdout: stdout || '', stderr: stderr || '' });
+        });
+    });
+}
+
 function setupMqttClient() {
     const client = mqtt.connect({
         username: config.mqtt.username,
@@ -54,7 +82,7 @@ function setupMqttClient() {
 function handleConnect(client) {
     state.isConnected = true;
     console.log(`[${new Date().toISOString()}] Connected to MQTT broker`);
-    
+
     subscribeToTopics(client);
     startDataPolling(client);
 }
@@ -84,7 +112,7 @@ function handleMessage(client, topic, message) {
 }
 
 function subscribeToTopics(client) {
-    client.subscribe(config.topics.chargeSwitch, (err) => {
+    client.subscribe(config.topics.chargeSwitch, { qos: 1 }, (err) => {
         if (err) {
             console.error('[Subscribe Error]', err.message);
         } else {
@@ -93,63 +121,69 @@ function subscribeToTopics(client) {
     });
 }
 
-function executeCommand(command, type, client) {
-    return new Promise((resolve, reject) => {
-        if (!validateCommand(command)) {
-            reject(new Error(`Invalid command: ${command}`));
-            return;
-        }
-
-        const cmdString = `mpp-solar -p ${config.device.port} --porttype ${config.device.portType} -c ${command}`;
-        exec(cmdString, (err, stdout, stderr) => {
-            if (err) {
-                console.error(`[${type} Error]`, err.message);
-                reject(err);
-            } else {
-                console.log(`[${type}] Executed command: ${command}`);
-                
-                const payload = JSON.stringify({
-                    batteryMode: state.currentBatteryMode,
-                    loadMode: state.currentLoadMode
-                });
-                client.publish(config.topics.modeResult, payload);
-                resolve(stdout);
-            }
-        });
-    });
-}
-
 function validateCommand(command) {
     const validCommandPattern = /^[a-zA-Z0-9_]+$/;
     return validCommandPattern.test(command);
 }
 
-function processSwitchCommands(data, client) {
-    const newBatteryMode = data.CommandCharge || '';
-    const newLoadMode = data.CommandLoad || '';
+function executeCommand(command, type) {
+    if (!validateCommand(command.trim())) {
+        return Promise.reject(new Error(`Invalid command: ${command}`));
+    }
+
+    return enqueueMpp(() => {
+        console.log(`[${type}] executing ${command}`);
+        return execMppCommand(command.trim()).then(res => {
+            console.log(`[${type}] stdout: ${res.stdout.trim()}`);
+            if (res.stderr) console.error(`[${type}] stderr: ${res.stderr.trim()}`);
+            return res.stdout;
+        });
+    });
+}
+
+function publishModeResult(client) {
+    const payload = JSON.stringify({
+        batteryMode: state.currentBatteryMode,
+        loadMode: state.currentLoadMode,
+        timestamp: new Date().toISOString()
+    });
+
+    client.publish(config.topics.modeResult, payload, { qos: 1 }, (err) => {
+        if (err) {
+            console.error('[Publish mode_result] error', err.message);
+        } else {
+            console.log('[Publish] mode_result sent (QoS 1)');
+        }
+    });
+}
+
+async function processSwitchCommands(data, client) {
+    const newBatteryMode = (data.CommandCharge || '').trim();
+    const newLoadMode = (data.CommandLoad || '').trim();
 
     if (newBatteryMode && newBatteryMode !== state.currentBatteryMode) {
-        executeCommand(newBatteryMode, 'PCP', client)
-            .then(() => {
-                state.currentBatteryMode = newBatteryMode;
-                console.log(`[PCP] Applied new battery mode: ${newBatteryMode}`);
-            })
-            .catch(err => console.error('[PCP Error]', err.message));
+        try {
+            await executeCommand(newBatteryMode, 'PCP');
+            state.currentBatteryMode = newBatteryMode;
+            publishModeResult(client);
+        } catch (err) {
+            console.error('[PCP Error]', err.message);
+        }
     }
 
     if (newLoadMode && newLoadMode !== state.currentLoadMode) {
-        executeCommand(newLoadMode, 'POP', client)
-            .then(() => {
-                state.currentLoadMode = newLoadMode;
-                console.log(`[POP] Applied new load mode: ${newLoadMode}`);
-            })
-            .catch(err => console.error('[POP Error]', err.message));
+        try {
+            await executeCommand(newLoadMode, 'POP');
+            state.currentLoadMode = newLoadMode;
+            publishModeResult(client);
+        } catch (err) {
+            console.error('[POP Error]', err.message);
+        }
     }
 }
 
 function startDataPolling(client) {
     pollAndPublishData(client);
-    
     setInterval(() => pollAndPublishData(client), config.pollingInterval);
 }
 
@@ -166,8 +200,10 @@ function pollAndPublishData(client) {
                 ...data
             });
 
-            client.publish(config.topics.data, payload);
-            console.log(`[Publish] Data published to ${config.topics.data}`);
+            client.publish(config.topics.data, payload, { qos: 0 }, (err) => {
+                if (err) console.error('[Publish Data Error]', err.message);
+                else console.log(`[Publish] Data published to ${config.topics.data}`);
+            });
         })
         .catch(err => console.error('[Polling Error]', err.message));
 }
@@ -188,39 +224,51 @@ async function collectInverterData() {
 }
 
 function executeQpigs() {
-    return new Promise((resolve, reject) => {
-        exec(`mpp-solar -p ${config.device.port} --porttype ${config.device.portType} -c QPIGS -o json`, (err, stdout) => {
-            if (err) {
-                reject(new Error(`QPIGS Error: ${err.message}`));
-                return;
-            }
-
-            try {
-                const data = JSON.parse(stdout);
-                resolve(data);
-            } catch (parseErr) {
-                reject(new Error(`QPIGS JSON parse error: ${parseErr.message}`));
-            }
+    return enqueueMpp(() => {
+        return new Promise((resolve, reject) => {
+            execFile('mpp-solar', [
+                '-p', config.device.port,
+                '--porttype', config.device.portType,
+                '-c', 'QPIGS',
+                '-o', 'json'
+            ], (err, stdout, stderr) => {
+                if (err) {
+                    reject(new Error(`QPIGS Error: ${err.message}`));
+                    return;
+                }
+                try {
+                    const data = JSON.parse(stdout);
+                    resolve(data);
+                } catch (parseErr) {
+                    reject(new Error(`QPIGS JSON parse error: ${parseErr.message}`));
+                }
+            });
         });
     });
 }
 
 function executeQpiri() {
-    return new Promise((resolve) => {
-        exec(`mpp-solar -p ${config.device.port} --porttype ${config.device.portType} -c QPIRI -o json`, (err, stdout) => {
-            if (err) {
-                console.error('[QPIRI Error]', err.message);
-                resolve({});
-                return;
-            }
-
-            try {
-                const data = JSON.parse(stdout);
-                resolve(data);
-            } catch (parseErr) {
-                console.error('[QPIRI JSON Error]', parseErr.message);
-                resolve({});
-            }
+    return enqueueMpp(() => {
+        return new Promise((resolve) => {
+            execFile('mpp-solar', [
+                '-p', config.device.port,
+                '--porttype', config.device.portType,
+                '-c', 'QPIRI',
+                '-o', 'json'
+            ], (err, stdout, stderr) => {
+                if (err) {
+                    console.error('[QPIRI Error]', err.message);
+                    resolve({});
+                    return;
+                }
+                try {
+                    const data = JSON.parse(stdout);
+                    resolve(data);
+                } catch (parseErr) {
+                    console.error('[QPIRI JSON Error]', parseErr.message);
+                    resolve({});
+                }
+            });
         });
     });
 }

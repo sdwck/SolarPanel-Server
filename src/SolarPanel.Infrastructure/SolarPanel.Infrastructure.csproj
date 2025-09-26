@@ -11,10 +11,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Удалите устаревшую версию Microsoft.AspNetCore.Hosting -->
-        <!-- <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" /> -->
-
-        <!-- Добавьте актуальную абстракцию хостинга -->
         <PackageReference Include="Assembly" Version="1.0.0" />
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
@@ -30,14 +26,5 @@
         <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     </ItemGroup>
-
-    <!-- Удалите явную ссылку на локальную библиотеку, она создаст конфликты -->
-    <!--
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions">
-        <HintPath>..\..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.7\Microsoft.AspNetCore.Hosting.Abstractions.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-    -->
 
 </Project>
