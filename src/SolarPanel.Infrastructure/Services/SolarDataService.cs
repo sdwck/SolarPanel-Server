@@ -136,28 +136,23 @@ public class SolarDataService : ISolarDataService
         };
     }
 
-    public async Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv")
+    public async Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv", int? gapInRecords = null)
     {
-        if (from > to) throw new ArgumentException("'from' cannot быть больше 'to'");
+        if (from > to) throw new ArgumentException("'from' cannot greater than 'to'");
 
-        source = (source ?? "pv").Trim().ToLowerInvariant();
-        if (source != "pv" && source != "ac") throw new ArgumentException("source must be 'pv' or 'ac'");
+        source = source.Trim().ToLowerInvariant();
+        if (source != "pv" && source != "ac") throw new ArgumentException("Source must be 'pv' or 'ac'");
 
-        var data = await _repository.GetByDateRangeAsync(from, to);
+        var data = (await _repository.GetByDateRangeAsync(from, to, gapInRecords)).ToList();
 
-        var ordered = data
-            .Where(d => d.PowerData != null)
-            .OrderBy(d => d.Timestamp)
-            .ToArray();
+        var energyWh = 0.0;
+        var samplesUsed = 0;
 
-        double energyWh = 0.0;
-        int samplesUsed = 0;
-
-        int count = ordered.Length;
-        for (int i = 1; i < count; i++)
+        var count = data.Count;
+        for (var i = 1; i < count; i++)
         {
-            var prev = ordered[i - 1];
-            var curr = ordered[i];
+            var prev = data[i - 1];
+            var curr = data[i];
 
             if (prev.PowerData == null || curr.PowerData == null) continue;
 
@@ -165,12 +160,10 @@ public class SolarDataService : ISolarDataService
             double p2 = source == "pv" ? curr.PowerData.PvInputPower : curr.PowerData.AcOutputActivePower;
 
             if (p1 < 0 || p2 < 0) continue;
-
             
             var hoursDiff = (curr.Timestamp - prev.Timestamp).TotalHours;
-            
          
-            var segmentKWh = ((p1 + p2) / 2.0) * hoursDiff;
+            var segmentKWh = (p1 + p2) / 2.0 * hoursDiff;
             energyWh += segmentKWh;
             samplesUsed++;
         }

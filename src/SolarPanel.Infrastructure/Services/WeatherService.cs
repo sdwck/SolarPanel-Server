@@ -22,7 +22,7 @@ namespace SolarPanel.Infrastructure.Services
         {
             _httpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(180) // Увеличиваем таймаут до 3 минут
+                Timeout = TimeSpan.FromSeconds(180)
             };
         }
 

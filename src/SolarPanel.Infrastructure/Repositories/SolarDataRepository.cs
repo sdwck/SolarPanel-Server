@@ -68,7 +68,6 @@ public class SolarDataRepository : ISolarDataRepository
             if (gapMinutes != 0) query = query.Where(x => x.Timestamp.Minute % gapMinutes == 0);
             else if (gapHours != 0) query = query.Where(x => x.Timestamp.Minute == 0);
         }
-
         
         var result = await query
             .OrderBy(x => x.Timestamp) 
@@ -80,11 +79,11 @@ public class SolarDataRepository : ISolarDataRepository
         }
 
         if (gapInRecords is not < 60) return result;
-        var seen = new HashSet<(int hour, int minute)>();
+        var seen = new HashSet<(int Year, int Month, int Day, int Hour, int Minute)>();
         var filtered = new List<SolarData>(result.Count);
         foreach (var item in result)
         {
-            var key = (item.Timestamp.Hour, item.Timestamp.Minute);
+            var key = (item.Timestamp.Year, item.Timestamp.Month, item.Timestamp.Day, item.Timestamp.Hour, item.Timestamp.Minute);
             if (seen.Add(key))
             {
                 filtered.Add(item);
@@ -104,7 +103,7 @@ public class SolarDataRepository : ISolarDataRepository
             .Select(x => new { x.Id, x.Timestamp })
             .ToListAsync();
 
-        int total = idTsList.Count;
+        var total = idTsList.Count;
         if (total == 0) return [];
         if (count >= total)
         {
@@ -121,17 +120,17 @@ public class SolarDataRepository : ISolarDataRepository
         if (count == 1) targets.Add(to);
         else
         {
-            long rangeTicks = (to - from).Ticks;
-            for (int k = 0; k < count; k++)
+            var rangeTicks = (to - from).Ticks;
+            for (var k = 0; k < count; k++)
             {
-                long offset = (long)Math.Round((double)k * rangeTicks / (count - 1));
+                var offset = (long)Math.Round((double)k * rangeTicks / (count - 1));
                 targets.Add(from.AddTicks(offset));
             }
         }
 
         var used = new bool[total];
         var selectedIndices = new List<int>(count);
-        int pos = 0;
+        var pos = 0;
 
         foreach (var target in targets)
         {

@@ -39,30 +39,27 @@ public class ModeResultRepository : IModeResultRepository
             }
 
             if (changesMade)
-            {
-                _context.ModeResults.Update(modeResult);
                 await _context.SaveChangesAsync();
-            }
         }
 
-        return modeResult ?? await _context.ModeResults.OrderByDescending(x => x.Id).FirstAsync();
+        return modeResult ?? await _context.ModeResults.FirstAsync();
     }
 
-    public async Task<ModeResult> SaveModeResultAsync(ModeResult modeResult)
+    public async Task SaveModeResultAsync(ModeResult modeResult)
     {
         var existingModeResult = await _context.ModeResults.FirstOrDefaultAsync();
-        if (existingModeResult == null)
+        if (existingModeResult is null)
         {
             _context.ModeResults.Add(modeResult);
         }
         else
         {
-            existingModeResult.BatteryMode = modeResult.BatteryMode;
-            existingModeResult.LoadMode = modeResult.LoadMode;
-            _context.ModeResults.Update(existingModeResult);
+            if (!string.IsNullOrWhiteSpace(modeResult.BatteryMode))
+                existingModeResult.BatteryMode = modeResult.BatteryMode;
+            if (!string.IsNullOrWhiteSpace(modeResult.LoadMode))
+                existingModeResult.LoadMode = modeResult.LoadMode;
         }
 
         await _context.SaveChangesAsync();
-        return existingModeResult ?? modeResult;
     }
 }

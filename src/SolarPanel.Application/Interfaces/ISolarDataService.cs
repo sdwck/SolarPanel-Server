@@ -11,5 +11,5 @@ public interface ISolarDataService
 
     Task<IEnumerable<SolarDataDto>> GetByDateRangeAsync(DateTime from, DateTime to, int? gapInRecords = null,
         int? count = null);
-    Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv");
+    Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source, int? gapInRecords = null);
 }

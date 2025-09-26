@@ -34,7 +34,7 @@ public class SystemMetricsService : ISystemMetricsService
 
         const int totalPanels = 1;
         var activePanels = dataList.Any(d => d.PowerData!.PvInputPower > 0) ? 1 : 0;
-        var totalPower = dataList.Max(d => d.PowerData!.PvInputPower); // TODO: Replace with real total power calculation
+        var totalPower = dataList.Max(d => d.PowerData!.PvInputPower);
         var avgEfficiency = 90.0;
         var totalEnergyToday = dataList
             .GroupBy(d => d.Timestamp.Date)

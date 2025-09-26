@@ -32,68 +32,45 @@ public class HistoryService : IHistoryService
         }
 
         var data = (await _repository.GetByDateRangeAsync(startDate, endDate, gap)).ToList();
-        var filtered = data
-            .Where(d => d.PowerData is { PvInputPower: not 0 } 
-                        && d.BatteryData is not null)
-            .OrderBy(d => d.Timestamp)
+        var avgInput = data.Where(d => d.PowerData != null).Average(d => d.PowerData!.PvInputPower);
+        var converted = data.Where(d => d is { PowerData: not null, BatteryData: not null })
+            .Select(x => MapToHistoryDto(x, avgInput))
             .ToList();
+        var filtered = new List<HistoryDataDto>();
+        foreach (var solarData in converted.Where(solarData => !filtered.Any(x =>
+                     x.Timestamp.Date == solarData.Timestamp.Date &&
+                     x.Timestamp.Hour == solarData.Timestamp.Hour &&
+                     x.Timestamp.Minute == solarData.Timestamp.Minute)))
+            filtered.Add(solarData);
 
+        return filtered;
+    }
 
-        var result = new List<HistoryDataDto>();
-        for (int i = 0; i < filtered.Count - 1; i++)
-        {
-            var current = filtered[i];
-            var next = filtered[i + 1];
-            var deltaHours = (next.Timestamp - current.Timestamp).TotalMinutes / 60.0;
-            if (deltaHours <= 0) continue;
-            
-            var avgPvInput = (current.PowerData.PvInputPower + next.PowerData.PvInputPower) / 2.0;
-            var avgAcOutput = (current.PowerData.AcOutputActivePower + next.PowerData.AcOutputActivePower) / 2.0;
-            var pvEnergy = avgPvInput * deltaHours;
-            var acEnergy = avgAcOutput * deltaHours;
-            double efficiency = (pvEnergy >= 0.01 && acEnergy > 0) ? (pvEnergy / acEnergy) * 100 : 0;
-            var status = efficiency switch
-            {
-                >= 85 => "optimal",
-                >= 70 => "good",
-                _ => "low"
-            };
-            result.Add(new HistoryDataDto
-            {
-                Timestamp = current.Timestamp,
-                SolarInput = avgPvInput, 
-                BatteryLevel = current.BatteryData.BatteryCapacity,
-                PowerOutput = avgAcOutput, 
-                Temperature = current.InverterHeatSinkTemperature,
-                Efficiency = efficiency,
-                Status = status
-            });
-        }
+    private static HistoryDataDto MapToHistoryDto(SolarData data, double avgInput)
+    {
+        var lowerBound = avgInput * 0.5;
+        var upperBound = avgInput * 2;
+
+        string status;
         
-        if (filtered.Count == 1)
+        if (data.PowerData!.PvInputPower >= upperBound)
+            status = "optimal";
+        else if (data.PowerData.PvInputPower >= lowerBound)
+            status = "good";
+        else if (data.PowerData.PvInputPower == 0)
+            status = "none";
+        else
+            status = "low";
+
+        return new HistoryDataDto
         {
-            var current = filtered[0];
-            var pvEnergy = current.PowerData.PvInputPower * (gap / 60.0);
-            var acEnergy = current.PowerData.AcOutputActivePower * (gap / 60.0);
-            double efficiency = (pvEnergy >= 0.01 && acEnergy > 0) ? (pvEnergy / acEnergy) * 100 : 0;
-            var status = efficiency switch
-            {
-                >= 85 => "optimal",
-                >= 70 => "good",
-                _ => "low"
-            };
-            result.Add(new HistoryDataDto
-            {
-                Timestamp = current.Timestamp,
-                SolarInput = current.PowerData.PvInputPower,
-                BatteryLevel = current.BatteryData.BatteryCapacity,
-                PowerOutput = current.PowerData.AcOutputActivePower,
-                Temperature = current.InverterHeatSinkTemperature,
-                Efficiency = efficiency,
-                Status = status
-            });
-        }
-        return result;
+            Timestamp = data.Timestamp,
+            SolarInput = data.PowerData!.PvInputPower,
+            BatteryLevel = data.BatteryData!.BatteryCapacity,
+            PowerOutput = data.PowerData.AcOutputActivePower,
+            Temperature = data.InverterHeatSinkTemperature,
+            Status = status
+        };
     }
 
     private static (DateTime from, DateTime to, int gap) GetDateRange(string timeRange)

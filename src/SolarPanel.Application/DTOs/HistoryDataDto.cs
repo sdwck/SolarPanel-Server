@@ -7,6 +7,5 @@ public class HistoryDataDto
     public double BatteryLevel { get; set; }
     public double PowerOutput { get; set; }
     public double Temperature { get; set; }
-    public double Efficiency { get; set; }
     public string Status { get; set; } = string.Empty;
 }

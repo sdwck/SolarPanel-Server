@@ -92,7 +92,7 @@ namespace SolarPanel.API.Controllers
             try
             {
                 var mode = await _modeResultRepository.GetModeResultAsync();
-                return Ok(new { data = mode });
+                return Ok(mode);
             }
             catch (Exception ex)
             {
