@@ -55,6 +55,7 @@ public class SolarDataRepository : ISolarDataRepository
         if (count.HasValue) return await GetSampledByCountAsync(from, to, count.Value);
 
         var query = _context.SolarData
+            .AsNoTracking() 
             .Include(x => x.BatteryData)
             .Include(x => x.PowerData)
             .Where(x => x.Timestamp >= from && x.Timestamp <= to);
@@ -68,8 +69,9 @@ public class SolarDataRepository : ISolarDataRepository
             else if (gapHours != 0) query = query.Where(x => x.Timestamp.Minute == 0);
         }
 
+        
         var result = await query
-            .OrderByDescending(x => x.Timestamp)
+            .OrderBy(x => x.Timestamp) 
             .ToListAsync();
         
         foreach (var item in result)

@@ -7,77 +7,30 @@ namespace SolarPanel.Infrastructure.Services;
 public class AnalyticsService : IAnalyticsService
 {
     private readonly ISolarDataRepository _repository;
+    private readonly ISolarDataService _solarDataService;
 
-    public AnalyticsService(ISolarDataRepository repository)
+    public AnalyticsService(ISolarDataRepository repository, ISolarDataService solarDataService)
     {
         _repository = repository;
-    }
-    private static int GetDaysInPeriod(string period)
-    {
-        return period.ToLower() switch
-        {
-            "day" => 1,
-            "week" => 7,
-            "month" => 30,
-            
-            _ => 1 
-        };
+        _solarDataService = solarDataService;
     }
 
     public async Task<AnalyticsDataDto> GetAnalyticsDataAsync(string timeRange)
     {
         var (from, to, gap) = GetDateRange(timeRange);
-        var raw = await _repository.GetByDateRangeAsync(from, to, gap);
-        var data = raw
-            .Where(d => d.PowerData != null)
-            .ToArray();
 
-        if (data.Length == 0)
-            return new AnalyticsDataDto();
+        var lastMonthFrom = from.AddMonths(-1);
+        var lastMonthTo = to.AddMonths(-1);
 
-        double sumPv = 0;
-        double sumAc = 0;
-        double sumBatteryCap = 0;
-        var batteryCount = 0;
-        var switchedOnCount = 0;
-        var totalCount = 0;
 
-        var daily = new Dictionary<DateTime, (double pvSum, double acSum)>();
+        var totalProduced = (await _solarDataService.GetEnergyProducedAsync(from, to, "pv")).EnergyKWh;
+        var totalConsumed = (await _solarDataService.GetEnergyProducedAsync(from, to, "ac")).EnergyKWh;
+        var lastMonthProd = (await _solarDataService.GetEnergyProducedAsync(lastMonthFrom, lastMonthTo, "pv")).EnergyKWh;
+        var lastMonthCons = (await _solarDataService.GetEnergyProducedAsync(lastMonthFrom, lastMonthTo, "ac")).EnergyKWh;
 
-        foreach (var d in data)
-        {
-            var pv = d.PowerData!.PvInputPower;
-            var ac = d.PowerData!.AcOutputActivePower;
-            sumPv += pv;
-            sumAc += ac;
-            totalCount++;
-            if (d.IsSwitchedOn) switchedOnCount++;
-            if (d.BatteryData != null)
-            {
-                sumBatteryCap += d.BatteryData.BatteryCapacity;
-                batteryCount++;
-            }
-
-            var day = d.Timestamp.Date;
-            if (daily.TryGetValue(day, out var agg))
-                daily[day] = (agg.pvSum + pv, agg.acSum + ac);
-            else
-                daily[day] = (pv, ac);
-        }
+        var improvement = lastMonthProd > 0 ? (totalProduced - lastMonthProd) / lastMonthProd * 100.0 : 0.0;
         
-
-        var totalEfficiency = sumPv > 0 ? (sumPv / (sumAc+sumPv)) * 100.0 : 0.0; 
-        int daysInPeriod = GetDaysInPeriod(timeRange);
-        var dailyAverage = new DailyAverageDto
-        {
-            SolarGeneration = Math.Round(totalCount > 0 ? (sumPv / 1000.0)/ daysInPeriod : 0, 2),
-            BatteryUsage = Math.Round(batteryCount > 0 ? (sumBatteryCap / batteryCount) / 100.0 * 10.0 : 0, 2),
-            Efficiency = Math.Round(totalEfficiency, 1),
-            Uptime = Math.Round(totalCount > 0 ? (double)switchedOnCount / totalCount * 100.0 : 0, 1)
-        };
-
-        var totalProduced = sumPv / 1000.0;
-        var totalConsumed = sumAc / 1000.0;
+       
         var weekly = new WeeklyTrendsDto
         {
             EnergyProduced = Math.Round(totalProduced, 1),
@@ -86,87 +39,53 @@ public class AnalyticsService : IAnalyticsService
             Co2Avoided = Math.Round(totalProduced * 0.45, 1)
         };
 
-        var lastMonthFrom = from.AddMonths(-1);
-        var lastMonthTo = to.AddMonths(-1);
-        var lastMonthRaw = await _repository.GetByDateRangeAsync(lastMonthFrom, lastMonthTo);
-        double lastMonthProd = 0;
-        foreach (var d in lastMonthRaw)
-        {
-            if (d.PowerData != null)
-                lastMonthProd += d.PowerData.PvInputPower;
-        }
-
-        lastMonthProd /= 1000.0;
-
-        var improvement = lastMonthProd > 0 ? (totalProduced - lastMonthProd) / lastMonthProd * 100.0 : 0.0;
-        var bestDayKv = daily.OrderByDescending(kv => kv.Value.pvSum).FirstOrDefault();
-        var bestDay = bestDayKv.Key != default ? bestDayKv.Key.ToString("dd MMM") : "N/A";
-
         var monthly = new MonthlyComparisonDto
         {
             ThisMonth = Math.Round(totalProduced, 1),
             LastMonth = Math.Round(lastMonthProd, 1),
             Improvement = Math.Round(improvement, 1),
-            BestDay = bestDay
+            BestDay = "N/A"
         };
 
-        var insights = new List<InsightDto>();
-        if (bestDayKv.Key != default)
-        {
-            insights.Add(new InsightDto
-            {
-                Type = "positive",
-                Title = "Peak Performance Day",
-                Description =
-                    $"{bestDayKv.Key:MMM dd} was your most productive day with {bestDayKv.Value.pvSum / 1000.0:F1} kWh generated",
-                Impact = "high"
-            });
-        }
+        var totalDays = (to.Date - from.Date).Days;
+        if (totalDays == 0) totalDays = 1;
 
-        var worstEff = daily
-            .Where(kv => kv.Value.pvSum > 0)
-            .Select(kv => new { Date = kv.Key, Ratio = 0.9 })
-            .OrderBy(x => x.Ratio)
-            .FirstOrDefault();
-
-        if (worstEff != null && worstEff.Ratio < 0.8)
+        var dailyAverage = new DailyAverageDto
         {
-            insights.Add(new InsightDto
-            {
-                Type = "warning",
-                Title = "Efficiency Dip",
-                Description = $"System efficiency dropped to {worstEff.Ratio * 100:F0}% on {worstEff.Date:MMM dd}",
-                Impact = "medium"
-            });
-        }
-
-        insights.Add(new InsightDto
-        {
-            Type = "info",
-            Title = "Maintenance Reminder",
-            Description = "Panel cleaning recommended to maintain optimal performance",
-            Impact = "low"
-        });
+            SolarGeneration = Math.Round(totalProduced / totalDays, 2),
+            BatteryUsage = 0,
+            Efficiency = totalProduced > 0 ? Math.Round((totalConsumed / totalProduced) * 100.0, 1) : 0,
+            Uptime = 0
+        };
 
         return new AnalyticsDataDto
         {
             DailyAverage = dailyAverage,
             WeeklyTrends = weekly,
             MonthlyComparison = monthly,
-            Insights = insights
+            Insights = new List<InsightDto>()
         };
     }
 
     private static (DateTime from, DateTime to, int gap) GetDateRange(string timeRange)
     {
         var now = DateTime.UtcNow;
+        var todayStart = now.Date;
+        var todayEnd = todayStart.AddDays(1).AddTicks(-1);
+        
+        
+        var dayOfWeek = (int)now.DayOfWeek;
+        var startOfWeek = todayStart.AddDays(-(dayOfWeek == 0 ? 6 : dayOfWeek - 1));
+        var endOfWeek = startOfWeek.AddDays(7).AddTicks(-1);
+
         return timeRange.ToLower() switch
         {
-            "day" => (now.AddDays(-1), now, 10),
-            "week" => (now.AddDays(-7), now, 60),
-            "month" => (now.AddDays(-30), now, 120),
-            "year" => (now.AddDays(-365), now, 240),
-            _ => (now.AddDays(-7), now, 60)
+            "day" => (todayStart, now, 1),
+            "week" => (startOfWeek, endOfWeek, 60),
+            "month" => (new DateTime(now.Year, now.Month, 1), new DateTime(now.Year, now.Month, 1).AddMonths(1).AddTicks(-1), 1),
+            "year" => (new DateTime(now.Year, 1, 1), new DateTime(now.Year, 1, 1).AddYears(1).AddTicks(-1), 1),
+            _ => (startOfWeek, endOfWeek, 1)
         };
     }
+
 }

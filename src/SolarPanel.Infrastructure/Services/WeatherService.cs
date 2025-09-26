@@ -20,7 +20,10 @@ namespace SolarPanel.Infrastructure.Services
 
         public WeatherService()
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(180) // Увеличиваем таймаут до 3 минут
+            };
         }
 
       

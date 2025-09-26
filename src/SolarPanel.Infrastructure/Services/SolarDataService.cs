@@ -138,7 +138,7 @@ public class SolarDataService : ISolarDataService
 
     public async Task<EnergyResponseDto> GetEnergyProducedAsync(DateTime from, DateTime to, string source = "pv")
     {
-        if (from > to) throw new ArgumentException("'from' cannot be greater than 'to'");
+        if (from > to) throw new ArgumentException("'from' cannot быть больше 'to'");
 
         source = (source ?? "pv").Trim().ToLowerInvariant();
         if (source != "pv" && source != "ac") throw new ArgumentException("source must be 'pv' or 'ac'");
@@ -148,12 +148,13 @@ public class SolarDataService : ISolarDataService
         var ordered = data
             .Where(d => d.PowerData != null)
             .OrderBy(d => d.Timestamp)
-            .ToList();
+            .ToArray();
 
         double energyWh = 0.0;
         int samplesUsed = 0;
 
-        for (int i = 1; i < ordered.Count; i++)
+        int count = ordered.Length;
+        for (int i = 1; i < count; i++)
         {
             var prev = ordered[i - 1];
             var curr = ordered[i];
@@ -165,7 +166,11 @@ public class SolarDataService : ISolarDataService
 
             if (p1 < 0 || p2 < 0) continue;
 
-            var segmentKWh = (p1 + p2) / 2.0 * (1 / 60.0);
+            
+            var hoursDiff = (curr.Timestamp - prev.Timestamp).TotalHours;
+            
+         
+            var segmentKWh = ((p1 + p2) / 2.0) * hoursDiff;
             energyWh += segmentKWh;
             samplesUsed++;
         }

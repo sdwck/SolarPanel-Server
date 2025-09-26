@@ -32,9 +32,12 @@ public class HistoryService : IHistoryService
         }
 
         var data = (await _repository.GetByDateRangeAsync(startDate, endDate, gap)).ToList();
-        var filtered = data.Where(d => d is { PowerData: not null, BatteryData: not null })
+        var filtered = data
+            .Where(d => d.PowerData is { PvInputPower: not 0 } 
+                        && d.BatteryData is not null)
             .OrderBy(d => d.Timestamp)
             .ToList();
+
 
         var result = new List<HistoryDataDto>();
         for (int i = 0; i < filtered.Count - 1; i++)
