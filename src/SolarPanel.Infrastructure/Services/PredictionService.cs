@@ -36,8 +36,8 @@ public class PredictionService : IPredictionService
         };
         var gap = period.ToLower() switch
         {
-            "today" or "tomorrow" => 1,
-            "week" => 10,
+            "today" or "tomorrow" => 5,
+            "week" => 15,
             _ => 30
         };
 
