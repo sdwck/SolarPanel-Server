@@ -127,9 +127,13 @@ if (!app.Environment.IsProduction())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())
 {

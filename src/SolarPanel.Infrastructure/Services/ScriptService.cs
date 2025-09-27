@@ -36,9 +36,9 @@ public class ScriptService : IScriptService
 
         return new ScriptMetadata
         {
-            ETag = $"\"{Convert.ToHexStringLower(shaHash)}\"",
+            ETag = $"\"{Convert.ToHexString(shaHash).ToLowerInvariant()}\"",
             LastWriteUtc = lastWriteUtc,
-            Signature = Convert.ToHexStringLower(hmacHash),
+            Signature = Convert.ToHexString(hmacHash).ToLowerInvariant(),
             FilePath = scriptPath
         };
     }
