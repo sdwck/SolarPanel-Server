@@ -8,16 +8,18 @@ namespace SolarPanel.Infrastructure.Services;
 public class PredictionService : IPredictionService
 {
     private readonly ISolarDataRepository _repository;
+    private readonly IMaintenanceTaskRepository _maintenanceTaskRepository;
 
-    public PredictionService(ISolarDataRepository repository)
+    public PredictionService(ISolarDataRepository repository, IMaintenanceTaskRepository maintenanceTaskRepository)
     {
         _repository = repository;
+        _maintenanceTaskRepository = maintenanceTaskRepository;
     }
 
     public async Task<PredictionDataDto> GetPredictionAsync(string period)
     {
         var historicalData = await GetHistoricalDataForPrediction(period);
-        var prediction = CalculatePrediction(historicalData, period);
+        var prediction = await CalculatePrediction(historicalData, period);
         
         return prediction;
     }
@@ -34,9 +36,8 @@ public class PredictionService : IPredictionService
         };
         var gap = period.ToLower() switch
         {
-            "today" or "tomorrow" => 10,
-            "week" => 30,
-            "month" => 60,
+            "today" or "tomorrow" => 1,
+            "week" => 10,
             _ => 30
         };
 
@@ -44,7 +45,7 @@ public class PredictionService : IPredictionService
         return data.Where(d => d.PowerData != null).ToList();
     }
 
-    private static PredictionDataDto CalculatePrediction(List<SolarData> historicalData, string period)
+    private async Task<PredictionDataDto> CalculatePrediction(List<SolarData> historicalData, string period)
     {
         if (historicalData.Count == 0)
         {
@@ -74,10 +75,28 @@ public class PredictionService : IPredictionService
         
         var factors = new List<string>
         {
-            "Historical performance",
             "Seasonal patterns",
             "Weather conditions"
         };
+
+        var recentIssues = (await _maintenanceTaskRepository.GetAllAsync()).ToList();
+        if (recentIssues.Any(x => x.Category == MaintenanceTask.MaintenanceCategory.Cleaning))
+        {
+            factors.Add("Cleaning issues");
+            confidence -= 10;
+        }
+        
+        if (recentIssues.Any(x => x.Category == MaintenanceTask.MaintenanceCategory.Repair))
+        {
+            factors.Add("Repair issues");
+            confidence -= 15;
+        }
+        
+        if (recentIssues.Any(x => x.Category == MaintenanceTask.MaintenanceCategory.Inspection))
+        {
+            factors.Add("Inspection issues");
+            confidence -= 5;
+        }
 
         return new PredictionDataDto
         {
@@ -85,6 +104,6 @@ public class PredictionService : IPredictionService
             EnergyKWh = Math.Round(predictedEnergy, 2),
             Confidence = confidence,
             Factors = factors
-        };  
+        };
     }
 }
