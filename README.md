@@ -1,88 +1,29 @@
-﻿# SolarPanel
+# SolarTrack
 
-Это проект для сбора и хранения данных с солнечных панелей, которые приходят через MQTT в формате JSON. Данные сохраняются в SQLServer.
+SolarTrack is a production-ready system for collecting, processing, and storing solar panel telemetry.
 
----
+## Project Overview
 
-## Структура проекта
+- SolarPanel.API — project for receiving data and exposing endpoints.
 
-- `/src/SolarPanel.API` — Web API, принимает и обрабатывает запросы.
-- `/src/SolarPanel.Application` — логика.
-- `/src/SolarPanel.Core` — сущности и интерфейсы.
-- `/src/SolarPanel.Infrastructure` — реализация доступа к данным и прочих интерфейсов, работа с БД, MQTT.
+- SolarPanel.Application — application logic and use cases.
 
----
+- SolarPanel.Core — domain entities and interfaces.
 
-## Как поднять проект локально
+- SolarPanel.Infrastructure — implementations for data access, MQTT integration, and persistence.
 
-### 1. Запуск SQLServer через Docker
+## Screenshots
 
-```bash
-docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=Strongpassword1234" -e "MSSQL_PID=Developer" -p 1433:1433 --name sqlserver2022 -d mcr.microsoft.com/mssql/server:2022-latest
-````
+<img width="2539" height="1295" alt="image" src="https://github.com/user-attachments/assets/9900938a-b8a5-4a0e-8931-442437e883af" />
 
-Скачать и установить Docker: 
-https://docs.docker.com/desktop/setup/install/windows-install/
+<img width="1163" height="1225" alt="image" src="https://github.com/user-attachments/assets/bad23d59-3e9b-48d3-beb6-11b9931cce24" />
 
-* Это создаст и запустит контейнер с БД.
+<img width="1195" height="721" alt="image" src="https://github.com/user-attachments/assets/0db82540-c650-4945-889c-f412f2e2cccf" />
 
----
+<img width="1057" height="1164" alt="image" src="https://github.com/user-attachments/assets/aeb9dfb6-418d-4463-b573-53553b8fc604" />
 
-### 2. Настройка секретов пользователя (user-secrets)
+<img width="988" height="1134" alt="image" src="https://github.com/user-attachments/assets/2fcf7aab-7171-4a36-9400-ab794e5d7236" />
 
-Перейдите в каталог с API:
+<img width="1491" height="1007" alt="4" src="https://github.com/user-attachments/assets/6779b139-7992-461c-8551-9beb171c2fb7" />
 
-```bash
-cd .\src\SolarPanel.API
-```
-
-Установите MQTT учётные данные:
-
-```bash
-dotnet user-secrets set "MqttSettings:Username" "my-mqtt-username"
-dotnet user-secrets set "MqttSettings:Password" "my-mqtt-password"
-```
-
-Установите JWT секрет:
-
-```bash
-dotnet user-secrets set "Jwt:Key" "c48d84853fa3f8c00555bcd91e0461de"
-```
-
-**Важно:** Убедитесь, что у вас установлен .NET SDK, иначе команда `dotnet` не сработает.
-
-Скачать .NET SDK:
-https://dotnet.microsoft.com/en-us/download
-
----
-
-### 3. Запуск проекта
-
-* Откройте проект в IDE.
-* Запустите проект.
-* Swagger UI доступен по адресу:
-  https://localhost:7039/swagger/index.html — для проверки API.
-
----
-
-## Работа с мокнутыми и реальными данными
-
-### В чём разница?
-
-* **Mock-данные** — это заранее подготовленные тестовые данные, которые помогают разрабатывать и тестировать без подключения к реальному облаку и MQTT.
-* **Реальные данные** — поступают из облака солнечных панелей через MQTT.
-
-### Как переключаться?
-
-1. В `appsettings.Development.json` найдите параметр (пример):
-
-```json
-{
-  "UseMockData": true
-}
-```
-
-* `true` — использовать mock-данные (для разработки без подключения к MQTT).
-* `false` — использовать реальные данные из MQTT.
-
-2. Перезапустите приложение после изменения.
+<img width="1760" height="1191" alt="image" src="https://github.com/user-attachments/assets/4a038814-7b3f-40f2-99f1-0d8bef16a188" />
