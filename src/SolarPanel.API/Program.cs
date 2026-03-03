@@ -131,6 +131,11 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.MapFallbackToFile("index.html");
+
 using (var scope = app.Services.CreateScope())
 {
     var appDbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

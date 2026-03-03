@@ -28,6 +28,8 @@ namespace SolarPanel.API.Controllers
         [HttpPost("battery")]
         public async Task<IActionResult> SetBatteryChargePriority([FromQuery] string option)
         {
+            return Ok(new { message = "The application is running in demo mode with read-only access.", option });
+            
             if (_webHostEnvironment.IsDevelopment())
             {
                 _logger.LogInformation("Development environment detected - skipping MQTT command publish.");
@@ -59,6 +61,8 @@ namespace SolarPanel.API.Controllers
         [HttpPost("load")]
         public async Task<IActionResult> SetLoadSourcePriority([FromQuery] string option)
         {
+            return Ok(new { message = "The application is running in demo mode with read-only access.", option });
+            
             if (_webHostEnvironment.IsDevelopment())
             {
                 _logger.LogInformation("Development environment detected - skipping MQTT command publish.");

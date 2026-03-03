@@ -4,7 +4,7 @@ const { execFile } = require('child_process');
 const config = {
     mqtt: {
         username: 'solar-panel-1',
-        password: Buffer.from('UGFzc3dvcmQx', 'base64').toString(),
+        password: Buffer.from('-', 'base64').toString(),
         protocol: 'mqtts',
         host: '9044eae185c0455d85f985eb24270bc9.s1.eu.hivemq.cloud',
         port: 8883,

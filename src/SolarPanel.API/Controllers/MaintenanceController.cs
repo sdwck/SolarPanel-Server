@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SolarPanel.Application.DTOs;
 using SolarPanel.Application.Interfaces;
 
@@ -6,6 +7,7 @@ namespace SolarPanel.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class MaintenanceController : ControllerBase
 {
     private readonly IMaintenanceTaskService _maintenanceService;
@@ -39,6 +41,7 @@ public class MaintenanceController : ControllerBase
     public async Task<ActionResult<MaintenanceTaskDto>> CreateTask(
         [FromBody] CreateMaintenanceTaskDto request)
     {
+        return Ok(new { message = "The application is running in demo mode with read-only access." });
         var task = await _maintenanceService.CreateAsync(request);
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
     }
@@ -47,6 +50,8 @@ public class MaintenanceController : ControllerBase
     public async Task<ActionResult<MaintenanceTaskDto>> UpdateTask(
         Guid id, [FromBody] UpdateMaintenanceTaskDto request)
     {
+        return Ok(new { message = "The application is running in demo mode with read-only access." });
+        
         try
         {
             var task = await _maintenanceService.UpdateAsync(id, request);
@@ -61,6 +66,8 @@ public class MaintenanceController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteTask(Guid id)
     {
+        return Ok(new { message = "The application is running in demo mode with read-only access." });
+        
         await _maintenanceService.DeleteAsync(id);
         return NoContent();
     }
@@ -69,6 +76,8 @@ public class MaintenanceController : ControllerBase
     public async Task<ActionResult<MaintenanceTaskDto>> CompleteTask(
         Guid id, [FromBody] CompleteMaintenanceTaskDto request)
     {
+        return Ok(new { message = "The application is running in demo mode with read-only access." });
+        
         try
         {
             var task = await _maintenanceService.CompleteAsync(id, request);

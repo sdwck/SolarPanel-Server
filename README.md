@@ -2,6 +2,8 @@
 
 SolarTrack is a production-ready system for collecting, processing, and storing solar panel telemetry.
 
+[Explore the Demo](https://solartrack.runasp.net/)
+
 ## Project Overview
 
 - SolarPanel.API — project for receiving data and exposing endpoints.

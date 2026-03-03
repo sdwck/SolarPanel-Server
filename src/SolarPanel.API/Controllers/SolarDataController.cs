@@ -242,10 +242,6 @@ public class SolarDataController : ControllerBase
         }
     }
     
-    
-    
-    
-    
     [HttpGet("metrics")]
     [Authorize]
     public async Task<ActionResult<SystemMetricsDto>> GetSystemMetrics()
